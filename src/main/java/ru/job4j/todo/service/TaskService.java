@@ -1,0 +1,43 @@
+package ru.job4j.todo.service;
+
+import lombok.AllArgsConstructor;
+import org.springframework.stereotype.Service;
+import ru.job4j.todo.model.Task;
+import ru.job4j.todo.store.TaskStore;
+
+import java.util.List;
+import java.util.Optional;
+
+@Service
+@AllArgsConstructor
+public class TaskService {
+    private final TaskStore taskStore;
+
+    public List<Task> findAll() {
+        return taskStore.findAll();
+    }
+
+    public List<Task> findCompleted() {
+        return taskStore.findCompleted();
+    }
+
+    public List<Task> findNew() {
+        return taskStore.findNew();
+    }
+
+    public Optional<Task> findById(int id) {
+        return taskStore.findById(id);
+    }
+
+    public Task save(Task task) {
+        return taskStore.save(task);
+    }
+
+    public void deleteById(int id) {
+        taskStore.deleteById(id);
+    }
+
+    public void completeTask(int id) {
+        taskStore.completeTask(id);
+    }
+}
