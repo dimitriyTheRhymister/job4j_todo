@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="">
+<head>
+    <title>TODO List</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+<div class="container mt-4">
+    <h1 class="text-center mb-4">TODO List</h1>
+
+    <div class="mb-3">
+        <a href="/tasks/create" class="btn btn-primary">Добавить задание</a>
+    </div>
+
+    <div class="btn-group mb-3" role="group">
+        <a th:href="@{/all}" class="btn btn-outline-primary"
+           th:classappend="${filter == 'all'} ? 'active'">Все</a>
+        <a th:href="@{/completed}" class="btn btn-outline-success"
+           th:classappend="${filter == 'completed'} ? 'active'">Выполненные</a>
+        <a th:href="@{/new}" class="btn btn-outline-warning"
+           th:classappend="${filter == 'new'} ? 'active'">Новые</a>
+    </div>
+
+    <table class="table table-striped">
+        <thead>
+        <tr>
+            <th>Описание</th>
+            <th>Дата создания</th>
+            <th>Статус</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr th:each="task : ${tasks}">
+            <td>
+                <a th:href="@{/tasks/{id}(id=${task.id})}" th:text="${task.description}"></a>
+            </td>
+            <td th:text="${#temporals.format(task.created, 'dd.MM.yyyy HH:mm')}"></td>
+            <td>
+                <span th:if="${task.done}" class="badge bg-success">Выполнено</span>
+                <span th:unless="${task.done}" class="badge bg-warning">Новое</span>
+            </td>
+        </tr>
+        <tr th:if="${tasks.empty}">
+            <td colspan="3" class="text-center">Заданий не найдено</td>
+        </tr>
+        </tbody>
+    </table>
+</div>
+</body>
+</html>
