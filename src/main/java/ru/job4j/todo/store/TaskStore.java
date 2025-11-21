@@ -37,33 +37,45 @@ public class TaskStore {
 
     public Task save(Task task) {
         return tx(session -> {
-            if (task.getId() == 0) {
+            if (task.getId() == null) {
                 session.save(task);
             } else {
-                session.update(task);
+                boolean updated = updateTask(session, task);
+                if (!updated) {
+                    throw new RuntimeException("Task with id " + task.getId() + " not found for update");
+                }
             }
             return task;
         });
     }
 
-    public void deleteById(int id) {
-        tx(session -> {
-            Task task = new Task();
-            task.setId(id);
-            session.delete(task);
-            return null;
+    public boolean deleteById(int id) {
+        return tx(session -> {
+            int deletedCount = session.createQuery("DELETE FROM Task WHERE id = :id")
+                    .setParameter("id", id)
+                    .executeUpdate();
+            return deletedCount > 0;
         });
     }
 
-    public void completeTask(int id) {
-        tx(session -> {
-            Task task = session.get(Task.class, id);
-            if (task != null) {
-                task.setDone(true);
-                session.update(task);
-            }
-            return null;
+    public boolean completeTask(int id) {
+        return tx(session -> {
+            int updatedCount = session.createQuery("UPDATE Task SET done = true WHERE id = :id")
+                    .setParameter("id", id)
+                    .executeUpdate();
+            return updatedCount > 0;
         });
+    }
+
+    private boolean updateTask(Session session, Task task) {
+        int updatedCount = session.createQuery(
+                        "UPDATE Task SET description = :description, done = :done WHERE id = :id"
+                )
+                .setParameter("description", task.getDescription())
+                .setParameter("done", task.isDone())
+                .setParameter("id", task.getId())
+                .executeUpdate();
+        return updatedCount > 0;
     }
 
     private <T> T tx(final Function<Session, T> command) {

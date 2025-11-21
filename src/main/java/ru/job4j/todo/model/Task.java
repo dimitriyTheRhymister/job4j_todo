@@ -2,6 +2,7 @@ package ru.job4j.todo.model;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 
 import javax.persistence.*;
@@ -12,10 +13,12 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @Entity
 @Table(name = "tasks")
+@EqualsAndHashCode(onlyExplicitlyIncluded = true)
 public class Task {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private int id;
+    @EqualsAndHashCode.Include
+    private Integer id;
 
     private String description;
 

@@ -29,15 +29,15 @@ public class TaskService {
         return taskStore.findById(id);
     }
 
+    public boolean deleteById(int id) {
+        return taskStore.deleteById(id);
+    }
+
+    public boolean completeTask(int id) {
+        return taskStore.completeTask(id);
+    }
+
     public Task save(Task task) {
         return taskStore.save(task);
-    }
-
-    public void deleteById(int id) {
-        taskStore.deleteById(id);
-    }
-
-    public void completeTask(int id) {
-        taskStore.completeTask(id);
     }
 }

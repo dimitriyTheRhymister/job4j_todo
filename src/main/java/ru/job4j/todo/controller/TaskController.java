@@ -31,15 +31,20 @@ public class TaskController {
     public String taskDetails(@PathVariable int id, Model model) {
         Optional<Task> taskOptional = taskService.findById(id);
         if (taskOptional.isEmpty()) {
-            return "redirect:/";
+            model.addAttribute("errorMessage", "Задача с id " + id + " не найдена");
+            return "error";
         }
         model.addAttribute("task", taskOptional.get());
         return "details";
     }
 
     @PostMapping("/complete/{id}")
-    public String completeTask(@PathVariable int id) {
-        taskService.completeTask(id);
+    public String completeTask(@PathVariable int id, Model model) {
+        boolean completed = taskService.completeTask(id);
+        if (!completed) {
+            model.addAttribute("errorMessage", "Не удалось отметить задачу как выполненную");
+            return "error";
+        }
         return "redirect:/tasks/" + id;
     }
 
@@ -47,21 +52,33 @@ public class TaskController {
     public String showEditForm(@PathVariable int id, Model model) {
         Optional<Task> taskOptional = taskService.findById(id);
         if (taskOptional.isEmpty()) {
-            return "redirect:/";
+            model.addAttribute("errorMessage", "Задача с id " + id + " не найдена");
+            return "error";
         }
         model.addAttribute("task", taskOptional.get());
         return "edit";
     }
 
     @PostMapping("/update")
-    public String updateTask(@ModelAttribute Task task) {
-        taskService.save(task);
-        return "redirect:/tasks/" + task.getId();
+    public String updateTask(@ModelAttribute Task task, Model model) {
+        try {
+            taskService.save(task);
+            return "redirect:/tasks/" + task.getId();
+        } catch (RuntimeException e) {
+            model.addAttribute("errorMessage", "Не удалось обновить задачу: " + e.getMessage());
+            return "error";
+        }
     }
 
     @PostMapping("/delete/{id}")
-    public String deleteTask(@PathVariable int id) {
-        taskService.deleteById(id);
-        return "redirect:/";
+    public String deleteTask(@PathVariable int id, Model model) {
+        boolean deleted = taskService.deleteById(id);
+        if (!deleted) {
+            model.addAttribute("errorMessage", "Задача с id " + id + " не найдена");
+            return "error";
+        } else {
+            model.addAttribute("successMessage", "Задача успешно удалена");
+            return "redirect:/";
+        }
     }
 }
