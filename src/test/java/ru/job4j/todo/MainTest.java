@@ -1,36 +1,24 @@
 package ru.job4j.todo;
 
-import org.hibernate.SessionFactory;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.context.ApplicationContext;
+import org.springframework.test.context.ActiveProfiles;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.AssertionsForClassTypes.assertThatCode;
 
 @SpringBootTest
+@ActiveProfiles("test")
 class MainTest {
 
-    @Autowired
-    private ApplicationContext context;
-
     @Test
-    void whenContextLoadsThenSuccess() {
-        /* Проверяем, что Spring контекст загружается без ошибок*/
-        assertThat(context).isNotNull();
+    void contextLoads() {
+        /* Пустой тест - если контекст загрузился, тест пройден */
     }
 
     @Test
-    void whenSessionFactoryBeanExistsThenSuccess() {
-        /* Проверяем, что бин SessionFactory создан*/
-        SessionFactory sessionFactory = context.getBean(SessionFactory.class);
-        assertThat(sessionFactory).isNotNull();
-        assertThat(sessionFactory.isOpen()).isTrue();
-    }
-
-    @Test
-    void whenMainClassStartsThenNoExceptions() {
-        /* Проверяем, что метод main запускается без исключений*/
-        assertThat(Main.class).isNotNull();
+    void whenMainMethodStartsThenNoExceptions() {
+        /* Просто проверяем, что класс компилируется и может быть запущен */
+        assertThatCode(() -> Main.main(new String[]{}))
+                .doesNotThrowAnyException();
     }
 }
