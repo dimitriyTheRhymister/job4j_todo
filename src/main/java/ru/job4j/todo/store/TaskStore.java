@@ -35,16 +35,9 @@ public class TaskStore {
         });
     }
 
-    public Task save(Task task) {
+    public Task createTask(Task task) {
         return tx(session -> {
-            if (task.getId() == null) {
-                session.save(task);
-            } else {
-                boolean updated = updateTask(session, task);
-                if (!updated) {
-                    throw new RuntimeException("Task with id " + task.getId() + " not found for update");
-                }
-            }
+            session.save(task);
             return task;
         });
     }
@@ -67,15 +60,17 @@ public class TaskStore {
         });
     }
 
-    private boolean updateTask(Session session, Task task) {
-        int updatedCount = session.createQuery(
-                        "UPDATE Task SET description = :description, done = :done WHERE id = :id"
-                )
-                .setParameter("description", task.getDescription())
-                .setParameter("done", task.isDone())
-                .setParameter("id", task.getId())
-                .executeUpdate();
-        return updatedCount > 0;
+    public boolean updateTask(Task task) {
+        return tx(session -> {
+            int updatedCount = session.createQuery(
+                            "UPDATE Task SET description = :description, done = :done WHERE id = :id"
+                    )
+                    .setParameter("description", task.getDescription())
+                    .setParameter("done", task.isDone())
+                    .setParameter("id", task.getId())
+                    .executeUpdate();
+            return updatedCount > 0;
+        });
     }
 
     private <T> T tx(final Function<Session, T> command) {

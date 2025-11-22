@@ -22,8 +22,8 @@ public class TaskController {
     }
 
     @PostMapping("/create")
-    public String create(@ModelAttribute Task task) {
-        taskService.save(task);
+    public String createTask(@ModelAttribute Task task) {
+        taskService.createTask(task);
         return "redirect:/";
     }
 
@@ -62,7 +62,11 @@ public class TaskController {
     @PostMapping("/update")
     public String updateTask(@ModelAttribute Task task, Model model) {
         try {
-            taskService.save(task);
+            boolean updated = taskService.updateTask(task);
+            if (!updated) {
+                model.addAttribute("errorMessage", "Задача не найдена");
+                return "error";
+            }
             return "redirect:/tasks/" + task.getId();
         } catch (RuntimeException e) {
             model.addAttribute("errorMessage", "Не удалось обновить задачу: " + e.getMessage());
@@ -76,9 +80,7 @@ public class TaskController {
         if (!deleted) {
             model.addAttribute("errorMessage", "Задача с id " + id + " не найдена");
             return "error";
-        } else {
-            model.addAttribute("successMessage", "Задача успешно удалена");
-            return "redirect:/";
         }
+        return "redirect:/";
     }
 }

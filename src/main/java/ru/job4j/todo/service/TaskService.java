@@ -37,7 +37,14 @@ public class TaskService {
         return taskStore.completeTask(id);
     }
 
-    public Task save(Task task) {
-        return taskStore.save(task);
+    public Task createTask(Task task) {
+        return taskStore.createTask(task);
+    }
+
+    public boolean updateTask(Task task) {
+        if (task.getId() == null) {
+            throw new IllegalArgumentException("Task ID must not be null for update");
+        }
+        return taskStore.updateTask(task);
     }
 }

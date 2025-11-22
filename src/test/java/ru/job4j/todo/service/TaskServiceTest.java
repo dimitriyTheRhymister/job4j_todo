@@ -30,14 +30,13 @@ class TaskServiceTest {
         task2.setCreated(LocalDateTime.now());
         task2.setDone(true);
 
-        taskService.save(task1);
-        taskService.save(task2);
+        taskService.createTask(task1);
+        taskService.createTask(task2);
 
         List<Task> tasks = taskService.findAll();
 
         assertThat(tasks).isNotEmpty();
 
-        // Очистка
         taskService.findAll().forEach(task -> taskService.deleteById(task.getId()));
     }
 }

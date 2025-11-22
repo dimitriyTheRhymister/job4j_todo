@@ -27,7 +27,6 @@ class TaskStoreTest {
 
     @BeforeEach
     void setUp() {
-        // Создаем тестовые задачи
         task1 = new Task();
         task1.setDescription("Test task 1");
         task1.setCreated(LocalDateTime.now().minusHours(2));
@@ -43,15 +42,13 @@ class TaskStoreTest {
         task3.setCreated(LocalDateTime.now());
         task3.setDone(false);
 
-        // Сохраняем в базу
-        task1 = taskStore.save(task1);
-        task2 = taskStore.save(task2);
-        task3 = taskStore.save(task3);
+        task1 = taskStore.createTask(task1);
+        task2 = taskStore.createTask(task2);
+        task3 = taskStore.createTask(task3);
     }
 
     @AfterEach
     void tearDown() {
-        // Очищаем базу после каждого теста
         taskStore.findAll().forEach(task -> taskStore.deleteById(task.getId()));
     }
 
@@ -69,7 +66,6 @@ class TaskStoreTest {
         List<Task> tasks = taskStore.findAll();
 
         assertThat(tasks).hasSize(3);
-        // Проверяем порядок: самая новая задача первой
         assertThat(tasks.get(0).getDescription()).isEqualTo("Test task 3");
         assertThat(tasks.get(1).getDescription()).isEqualTo("Test task 2");
         assertThat(tasks.get(2).getDescription()).isEqualTo("Test task 1");
@@ -117,12 +113,11 @@ class TaskStoreTest {
         newTask.setCreated(LocalDateTime.now());
         newTask.setDone(false);
 
-        Task savedTask = taskStore.save(newTask);
+        Task savedTask = taskStore.createTask(newTask);
 
         assertThat(savedTask.getId()).isNotNull();
         assertThat(savedTask.getDescription()).isEqualTo("New test task");
 
-        // Проверяем, что задача действительно сохранилась в базу
         Optional<Task> foundTask = taskStore.findById(savedTask.getId());
         assertThat(foundTask).isPresent();
         assertThat(foundTask.get().getDescription()).isEqualTo("New test task");
@@ -130,16 +125,14 @@ class TaskStoreTest {
 
     @Test
     void whenUpdateExistingTaskThenTaskUpdated() {
-        // Обновляем задачу
         task1.setDescription("Updated task 1");
         task1.setDone(true);
 
-        Task updatedTask = taskStore.save(task1);
+        Task updatedTask = taskStore.createTask(task1);
 
         assertThat(updatedTask.getDescription()).isEqualTo("Updated task 1");
         assertThat(updatedTask.isDone()).isTrue();
 
-        // Проверяем в базе
         Optional<Task> foundTask = taskStore.findById(task1.getId());
         assertThat(foundTask).isPresent();
         assertThat(foundTask.get().getDescription()).isEqualTo("Updated task 1");
@@ -152,7 +145,6 @@ class TaskStoreTest {
 
         assertThat(deleted).isTrue();
 
-        // Проверяем, что задача удалена
         Optional<Task> foundTask = taskStore.findById(task1.getId());
         assertThat(foundTask).isEmpty();
     }
@@ -170,7 +162,6 @@ class TaskStoreTest {
 
         assertThat(completed).isTrue();
 
-        // Проверяем, что задача стала выполненной
         Optional<Task> foundTask = taskStore.findById(task1.getId());
         assertThat(foundTask).isPresent();
         assertThat(foundTask.get().isDone()).isTrue();
