@@ -3,7 +3,8 @@
         xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
         xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
-        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.1.xsd">
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.0.xsd">
 
-    <include file="scripts/001_create_tasks_table.sql" relativeToChangelogFile="true"/>
+    <include file="classpath:db/scripts/001_create_tasks_table.sql" relativeToChangelogFile="false"/>
+    <include file="classpath:db/scripts/002_create_users_table.sql" relativeToChangelogFile="false"/>
 </databaseChangeLog>
