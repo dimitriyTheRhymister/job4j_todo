@@ -19,8 +19,4 @@ public class UserService {
     public Optional<User> findByLoginAndPassword(String login, String password) {
         return userStore.findByLoginAndPassword(login, password);
     }
-
-    public boolean isLoginExists(String login) {
-        return userStore.findByLogin(login).isPresent();
-    }
 }

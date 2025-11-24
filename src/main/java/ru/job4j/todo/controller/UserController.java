@@ -1,6 +1,7 @@
 package ru.job4j.todo.controller;
 
 import lombok.AllArgsConstructor;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -28,19 +29,20 @@ public class UserController {
 
     @PostMapping("/register")
     public String register(@ModelAttribute User user, Model model, RedirectAttributes redirectAttributes) {
-        if (userService.isLoginExists(user.getLogin())) {
+        try {
+            var savedUser = userService.save(user);
+            if (savedUser.isEmpty()) {
+                model.addAttribute("error", "Registration failed");
+                return "users/register";
+            }
+
+            redirectAttributes.addFlashAttribute("message", "Registration successful!");
+            return "redirect:/users/login";
+
+        } catch (DataIntegrityViolationException e) {
             model.addAttribute("error", "Login already exists");
             return "users/register";
         }
-
-        var savedUser = userService.save(user);
-        if (savedUser.isEmpty()) {
-            model.addAttribute("error", "Registration failed");
-            return "users/register";
-        }
-
-        redirectAttributes.addFlashAttribute("message", "Registration successful! Please login.");
-        return "redirect:/users/login";
     }
 
     @GetMapping("/login")
