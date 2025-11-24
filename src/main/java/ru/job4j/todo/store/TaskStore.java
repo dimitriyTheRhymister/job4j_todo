@@ -38,19 +38,19 @@ public class TaskStore {
     }
 
     public boolean deleteById(int id) {
-        crudRepository.run(
+        int deletedCount = crudRepository.executeUpdate(
                 "DELETE FROM Task WHERE id = :id",
                 Map.of("id", id)
         );
-        return true;
+        return deletedCount > 0;
     }
 
     public boolean completeTask(int id) {
-        crudRepository.run(
+        int updatedCount = crudRepository.executeUpdate(
                 "UPDATE Task SET done = true WHERE id = :id",
                 Map.of("id", id)
         );
-        return true;
+        return updatedCount > 0;
     }
 
     public boolean updateTask(Task task) {
