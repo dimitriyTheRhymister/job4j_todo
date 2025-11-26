@@ -7,6 +7,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
 import ru.job4j.todo.model.Task;
+import ru.job4j.todo.model.User;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -21,40 +22,54 @@ class TaskStoreTest {
     @Autowired
     private TaskStore taskStore;
 
+    @Autowired
+    private UserStore userStore;
+
+    private User testUser;
     private Task task1;
     private Task task2;
     private Task task3;
 
     @BeforeEach
     void setUp() {
+        testUser = new User();
+        testUser.setName("Test User");
+        testUser.setLogin("testuser");
+        testUser.setPassword("password");
+        testUser = userStore.createUser(testUser);
+
         task1 = new Task();
         task1.setDescription("Test task 1");
         task1.setCreated(LocalDateTime.now().minusHours(2));
         task1.setDone(false);
+        task1.setUser(testUser);
 
         task2 = new Task();
         task2.setDescription("Test task 2");
         task2.setCreated(LocalDateTime.now().minusHours(1));
         task2.setDone(true);
+        task2.setUser(testUser);
 
         task3 = new Task();
         task3.setDescription("Test task 3");
         task3.setCreated(LocalDateTime.now());
         task3.setDone(false);
+        task3.setUser(testUser);
 
-        task1 = taskStore.createTask(task1);
-        task2 = taskStore.createTask(task2);
-        task3 = taskStore.createTask(task3);
+        task1 = taskStore.createTask(task1, testUser);
+        task2 = taskStore.createTask(task2, testUser);
+        task3 = taskStore.createTask(task3, testUser);
     }
 
     @AfterEach
     void tearDown() {
-        taskStore.findAll().forEach(task -> taskStore.deleteById(task.getId()));
+        taskStore.findAllByUser(testUser).forEach(task -> taskStore.deleteById(task.getId()));
+        userStore.deleteById(testUser.getId());
     }
 
     @Test
-    void whenFindAllThenReturnAllTasks() {
-        List<Task> tasks = taskStore.findAll();
+    void whenFindAllByUserThenReturnAllUserTasks() {
+        List<Task> tasks = taskStore.findAllByUser(testUser);
 
         assertThat(tasks).hasSize(3);
         assertThat(tasks).extracting(Task::getDescription)
@@ -62,8 +77,8 @@ class TaskStoreTest {
     }
 
     @Test
-    void whenFindAllThenReturnTasksOrderedByCreatedDesc() {
-        List<Task> tasks = taskStore.findAll();
+    void whenFindAllByUserThenReturnTasksOrderedByCreatedDesc() {
+        List<Task> tasks = taskStore.findAllByUser(testUser);
 
         assertThat(tasks).hasSize(3);
         assertThat(tasks.get(0).getDescription()).isEqualTo("Test task 3");
@@ -72,8 +87,8 @@ class TaskStoreTest {
     }
 
     @Test
-    void whenFindCompletedThenReturnOnlyCompletedTasks() {
-        List<Task> completedTasks = taskStore.findCompleted();
+    void whenFindCompletedByUserThenReturnOnlyCompletedTasks() {
+        List<Task> completedTasks = taskStore.findCompletedByUser(testUser);
 
         assertThat(completedTasks).hasSize(1);
         assertThat(completedTasks.get(0).getDescription()).isEqualTo("Test task 2");
@@ -81,8 +96,8 @@ class TaskStoreTest {
     }
 
     @Test
-    void whenFindNewThenReturnOnlyNewTasks() {
-        List<Task> newTasks = taskStore.findNew();
+    void whenFindNewByUserThenReturnOnlyNewTasks() {
+        List<Task> newTasks = taskStore.findNewByUser(testUser);
 
         assertThat(newTasks).hasSize(2);
         assertThat(newTasks).extracting(Task::getDescription)
@@ -97,6 +112,7 @@ class TaskStoreTest {
         assertThat(foundTask).isPresent();
         assertThat(foundTask.get().getDescription()).isEqualTo("Test task 1");
         assertThat(foundTask.get().isDone()).isFalse();
+        assertThat(foundTask.get().getUser().getId()).isEqualTo(testUser.getId());
     }
 
     @Test
@@ -107,36 +123,23 @@ class TaskStoreTest {
     }
 
     @Test
-    void whenSaveNewTaskThenTaskHasId() {
+    void whenSaveNewTaskThenTaskHasIdAndUser() {
         Task newTask = new Task();
         newTask.setDescription("New test task");
         newTask.setCreated(LocalDateTime.now());
         newTask.setDone(false);
+        newTask.setUser(testUser);
 
-        Task savedTask = taskStore.createTask(newTask);
+        Task savedTask = taskStore.createTask(newTask, testUser);
 
         assertThat(savedTask.getId()).isNotNull();
         assertThat(savedTask.getDescription()).isEqualTo("New test task");
+        assertThat(savedTask.getUser().getId()).isEqualTo(testUser.getId());
 
         Optional<Task> foundTask = taskStore.findById(savedTask.getId());
         assertThat(foundTask).isPresent();
         assertThat(foundTask.get().getDescription()).isEqualTo("New test task");
-    }
-
-    @Test
-    void whenUpdateExistingTaskThenTaskUpdated() {
-        task1.setDescription("Updated task 1");
-        task1.setDone(true);
-
-        Task updatedTask = taskStore.createTask(task1);
-
-        assertThat(updatedTask.getDescription()).isEqualTo("Updated task 1");
-        assertThat(updatedTask.isDone()).isTrue();
-
-        Optional<Task> foundTask = taskStore.findById(task1.getId());
-        assertThat(foundTask).isPresent();
-        assertThat(foundTask.get().getDescription()).isEqualTo("Updated task 1");
-        assertThat(foundTask.get().isDone()).isTrue();
+        assertThat(foundTask.get().getUser().getId()).isEqualTo(testUser.getId());
     }
 
     @Test

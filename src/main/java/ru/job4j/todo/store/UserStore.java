@@ -47,11 +47,11 @@ public class UserStore {
     }
 
     public boolean deleteById(int id) {
-        crudRepository.run(
+        int deletedCount = crudRepository.executeUpdate(
                 "DELETE FROM User WHERE id = :id",
                 Map.of("id", id)
         );
-        return true;
+        return deletedCount > 0;
     }
 
     public boolean updateUser(User user) {

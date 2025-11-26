@@ -10,11 +10,14 @@
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h1 class="mb-0">TODO List</h1>
         <div class="user-info">
-            <span class="me-3">Добро пожаловать, <strong th:text="${user.name}">Гость</strong>!</span>
-            <form th:if="${user.id != null}" th:action="@{/users/logout}" method="post" class="d-inline">
+            <span class="me-3">Добро пожаловать,
+                <strong th:if="${user != null}" th:text="${user.name}">Пользователь</strong>
+                <strong th:if="${user == null}">Гость</strong>!
+            </span>
+            <form th:if="${user != null and user.id != null}" th:action="@{/users/logout}" method="post" class="d-inline">
                 <button type="submit" class="btn btn-outline-danger btn-sm">Выйти</button>
             </form>
-            <div th:if="${user.id == null}" class="d-inline">
+            <div th:if="${user == null or user.id == null}" class="d-inline">
                 <a th:href="@{/users/login}" class="btn btn-outline-primary btn-sm me-2">Войти</a>
                 <a th:href="@{/users/register}" class="btn btn-primary btn-sm">Регистрация</a>
             </div>
@@ -22,18 +25,18 @@
     </div>
 
     <!-- Блок добавления задания (только для авторизованных) -->
-    <div class="mb-3" th:if="${user.id != null}">
+    <div class="mb-3" th:if="${user != null and user.id != null}">
         <a th:href="@{/tasks/create}" class="btn btn-primary">Добавить задание</a>
     </div>
 
     <!-- Сообщение для неавторизованных пользователей -->
-    <div th:if="${user.id == null}" class="alert alert-info">
+    <div th:if="${user == null or user.id == null}" class="alert alert-info">
         Для работы с заданиями необходимо <a th:href="@{/users/login}">войти</a> или
         <a th:href="@{/users/register}">зарегистрироваться</a>.
     </div>
 
     <!-- Фильтры (только для авторизованных) -->
-    <div class="btn-group mb-3" role="group" th:if="${user.id != null}">
+    <div class="btn-group mb-3" role="group" th:if="${user != null and user.id != null}">
         <a th:href="@{/all}" class="btn btn-outline-primary"
            th:classappend="${filter == 'all'} ? 'active'">Все</a>
         <a th:href="@{/completed}" class="btn btn-outline-success"
@@ -43,11 +46,12 @@
     </div>
 
     <!-- Таблица заданий (только для авторизованных) -->
-    <div th:if="${user.id != null}">
+    <div th:if="${user != null and user.id != null}">
         <table class="table table-striped">
             <thead>
             <tr>
                 <th>Описание</th>
+                <th>Пользователь</th>
                 <th>Дата создания</th>
                 <th>Статус</th>
             </tr>
@@ -57,6 +61,7 @@
                 <td>
                     <a th:href="@{/tasks/{id}(id=${task.id})}" th:text="${task.description}"></a>
                 </td>
+                <td th:text="${task.user?.name}"></td>
                 <td th:text="${#temporals.format(task.created, 'dd.MM.yyyy HH:mm')}"></td>
                 <td>
                     <span th:if="${task.done}" class="badge bg-success">Выполнено</span>
@@ -64,14 +69,14 @@
                 </td>
             </tr>
             <tr th:if="${tasks.empty}">
-                <td colspan="3" class="text-center">Заданий не найдено</td>
+                <td colspan="4" class="text-center">Заданий не найдено</td>
             </tr>
             </tbody>
         </table>
     </div>
 
     <!-- Сообщение когда пользователь авторизован, но нет заданий -->
-    <div th:if="${user.id != null and tasks.empty}" class="alert alert-warning">
+    <div th:if="${user != null and user.id != null and tasks.empty}" class="alert alert-warning">
         У вас пока нет заданий. <a th:href="@{/tasks/create}">Создайте первое задание</a>.
     </div>
 </div>

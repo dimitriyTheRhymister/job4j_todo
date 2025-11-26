@@ -19,4 +19,8 @@ public class UserService {
     public Optional<User> findByLoginAndPassword(String login, String password) {
         return userStore.findByLoginAndPassword(login, password);
     }
+
+    public boolean deleteById(int id) {
+        return userStore.deleteById(id);
+    }
 }

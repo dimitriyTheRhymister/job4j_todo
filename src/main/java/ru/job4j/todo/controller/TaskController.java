@@ -4,9 +4,12 @@ import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import ru.job4j.todo.model.Task;
+import ru.job4j.todo.model.User;
 import ru.job4j.todo.service.TaskService;
 
+import javax.servlet.http.HttpServletRequest;
 import java.util.Optional;
 
 @Controller
@@ -22,9 +25,23 @@ public class TaskController {
     }
 
     @PostMapping("/create")
-    public String createTask(@ModelAttribute Task task) {
-        taskService.createTask(task);
-        return "redirect:/";
+    public String createTask(@ModelAttribute Task task, HttpServletRequest request, RedirectAttributes redirectAttributes) {
+        User user = (User) request.getSession().getAttribute("user");
+        if (user == null) {
+            redirectAttributes.addFlashAttribute("error", "Для создания задачи необходимо войти в систему");
+            return "redirect:/users/login";
+        }
+
+        task.setUser(user);
+
+        try {
+            taskService.createTask(task, user);
+            redirectAttributes.addFlashAttribute("success", "Задача успешно создана!");
+            return "redirect:/";
+        } catch (Exception e) {
+            redirectAttributes.addFlashAttribute("error", "Ошибка при создании задачи");
+            return "redirect:/tasks/create";
+        }
     }
 
     @GetMapping("/{id}")
