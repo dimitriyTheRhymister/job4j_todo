@@ -27,11 +27,6 @@ public class TaskController {
     @PostMapping("/create")
     public String createTask(@ModelAttribute Task task, HttpServletRequest request, RedirectAttributes redirectAttributes) {
         User user = (User) request.getSession().getAttribute("user");
-        if (user == null) {
-            redirectAttributes.addFlashAttribute("error", "Для создания задачи необходимо войти в систему");
-            return "redirect:/users/login";
-        }
-
         task.setUser(user);
 
         try {
