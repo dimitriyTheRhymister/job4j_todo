@@ -25,8 +25,9 @@ public class TaskController {
     }
 
     @PostMapping("/create")
-    public String createTask(@ModelAttribute Task task, HttpServletRequest request, RedirectAttributes redirectAttributes) {
-        User user = (User) request.getSession().getAttribute("user");
+    public String createTask(@ModelAttribute Task task,
+                             @SessionAttribute("user") User user,
+                             RedirectAttributes redirectAttributes) {
         task.setUser(user);
 
         try {
@@ -40,7 +41,8 @@ public class TaskController {
     }
 
     @GetMapping("/{id}")
-    public String taskDetails(@PathVariable int id, Model model) {
+    public String taskDetails(@PathVariable int id,
+                              Model model) {
         Optional<Task> taskOptional = taskService.findById(id);
         if (taskOptional.isEmpty()) {
             model.addAttribute("errorMessage", "Задача с id " + id + " не найдена");
@@ -51,7 +53,8 @@ public class TaskController {
     }
 
     @PostMapping("/complete/{id}")
-    public String completeTask(@PathVariable int id, Model model) {
+    public String completeTask(@PathVariable int id,
+                               Model model) {
         boolean completed = taskService.completeTask(id);
         if (!completed) {
             model.addAttribute("errorMessage", "Не удалось отметить задачу как выполненную");
@@ -61,7 +64,8 @@ public class TaskController {
     }
 
     @GetMapping("/edit/{id}")
-    public String showEditForm(@PathVariable int id, Model model) {
+    public String showEditForm(@PathVariable int id,
+                               Model model) {
         Optional<Task> taskOptional = taskService.findById(id);
         if (taskOptional.isEmpty()) {
             model.addAttribute("errorMessage", "Задача с id " + id + " не найдена");
@@ -72,7 +76,8 @@ public class TaskController {
     }
 
     @PostMapping("/update")
-    public String updateTask(@ModelAttribute Task task, Model model) {
+    public String updateTask(@ModelAttribute Task task,
+                             Model model) {
         try {
             boolean updated = taskService.updateTask(task);
             if (!updated) {
@@ -87,7 +92,8 @@ public class TaskController {
     }
 
     @PostMapping("/delete/{id}")
-    public String deleteTask(@PathVariable int id, Model model) {
+    public String deleteTask(@PathVariable int id,
+                             Model model) {
         boolean deleted = taskService.deleteById(id);
         if (!deleted) {
             model.addAttribute("errorMessage", "Задача с id " + id + " не найдена");
