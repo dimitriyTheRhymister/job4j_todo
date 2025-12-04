@@ -8,4 +8,6 @@
     <include file="classpath:db/scripts/001_create_tasks_table.sql" relativeToChangelogFile="false"/>
     <include file="classpath:db/scripts/002_create_users_table.sql" relativeToChangelogFile="false"/>
     <include file="classpath:db/scripts/003_add_user_id_to_tasks.sql" relativeToChangelogFile="false"/>
+    <include file="classpath:db/scripts/004_create_priorities_table.sql" relativeToChangelogFile="false"/>
+    <include file="classpath:db/scripts/005_add_priority_id_to_tasks.sql" relativeToChangelogFile="false"/>
 </databaseChangeLog>

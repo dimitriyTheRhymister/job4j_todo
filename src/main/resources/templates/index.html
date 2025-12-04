@@ -51,9 +51,10 @@
             <thead>
             <tr>
                 <th>Описание</th>
-                <th>Пользователь</th>
                 <th>Дата создания</th>
+                <th>Приоритет</th> <!-- НОВАЯ КОЛОНКА -->
                 <th>Статус</th>
+                <th>Пользователь</th>
             </tr>
             </thead>
             <tbody>
@@ -61,15 +62,23 @@
                 <td>
                     <a th:href="@{/tasks/{id}(id=${task.id})}" th:text="${task.description}"></a>
                 </td>
-                <td th:text="${task.user?.name}"></td>
                 <td th:text="${#temporals.format(task.created, 'dd.MM.yyyy HH:mm')}"></td>
+                <td>
+                    <!-- Отображаем приоритет с цветом -->
+                    <span th:if="${task.priority != null}"
+                          th:text="${task.priority.name}"
+                          th:class="'badge bg-' + (${task.priority.name} == 'urgently' ? 'danger' : 'primary')">
+                    </span>
+                    <span th:if="${task.priority == null}" class="badge bg-secondary">Нет</span>
+                </td>
                 <td>
                     <span th:if="${task.done}" class="badge bg-success">Выполнено</span>
                     <span th:unless="${task.done}" class="badge bg-warning">Новое</span>
                 </td>
+                <td th:text="${task.user?.name}"></td>
             </tr>
             <tr th:if="${tasks.empty}">
-                <td colspan="4" class="text-center">Заданий не найдено</td>
+                <td colspan="5" class="text-center">Заданий не найдено</td>
             </tr>
             </tbody>
         </table>

@@ -1,19 +1,15 @@
 package ru.job4j.todo.model;
 
-import lombok.AllArgsConstructor;
+import javax.persistence.*;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
-import lombok.NoArgsConstructor;
-
-import javax.persistence.*;
 import java.time.LocalDateTime;
+import java.util.Calendar;
 
 @Data
-@AllArgsConstructor
-@NoArgsConstructor
+@EqualsAndHashCode(onlyExplicitlyIncluded = true)
 @Entity
 @Table(name = "tasks")
-@EqualsAndHashCode(onlyExplicitlyIncluded = true)
 public class Task {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -22,9 +18,14 @@ public class Task {
 
     private String description;
 
+    // Меняем Calendar на LocalDateTime для совместимости
     private LocalDateTime created = LocalDateTime.now();
 
     private boolean done;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "priority_id")
+    private Priority priority;
 
     @ManyToOne
     @JoinColumn(name = "user_id")

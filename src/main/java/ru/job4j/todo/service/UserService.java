@@ -3,14 +3,14 @@ package ru.job4j.todo.service;
 import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Service;
 import ru.job4j.todo.model.User;
-import ru.job4j.todo.store.UserStore;
+import ru.job4j.todo.repository.UserRepository;
 
 import java.util.Optional;
 
 @Service
 @AllArgsConstructor
 public class UserService {
-    private final UserStore userStore;
+    private final UserRepository userStore;
 
     public Optional<User> save(User user) {
         return Optional.ofNullable(userStore.createUser(user));

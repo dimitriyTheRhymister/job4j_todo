@@ -9,13 +9,28 @@
     <h1 class="mb-4">Редактировать задание</h1>
 
     <form th:action="@{/tasks/update}" th:object="${task}" method="post">
+        <!-- ID задачи -->
         <input type="hidden" th:field="*{id}">
-        <input type="hidden" th:field="*{created}">
-        <input type="hidden" th:field="*{done}">
+
+        <!-- ID пользователя как отдельное поле -->
+        <input type="hidden" name="userId" th:value="${task.user.id}">
 
         <div class="mb-3">
             <label for="description" class="form-label">Описание:</label>
             <textarea id="description" th:field="*{description}" class="form-control" rows="4" required></textarea>
+        </div>
+
+        <!-- Выбор приоритета (отдельный параметр, не часть объекта Task) -->
+        <div class="mb-3">
+            <label for="priorityId" class="form-label">Приоритет:</label>
+            <select id="priorityId" name="priorityId" class="form-control">
+                <option value="">-- Выберите приоритет --</option>
+                <option th:each="priority : ${priorities}"
+                        th:value="${priority.id}"
+                        th:text="${priority.name}"
+                        th:selected="${task.priority != null and task.priority.id == priority.id}">
+                </option>
+            </select>
         </div>
 
         <div class="mb-3">

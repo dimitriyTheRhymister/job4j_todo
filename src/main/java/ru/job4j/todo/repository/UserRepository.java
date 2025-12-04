@@ -1,4 +1,4 @@
-package ru.job4j.todo.store;
+package ru.job4j.todo.repository;
 
 import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Repository;
@@ -10,7 +10,7 @@ import java.util.Optional;
 
 @Repository
 @AllArgsConstructor
-public class UserStore {
+public class UserRepository {
     private final CrudRepository crudRepository;
 
     public List<User> findAll() {

@@ -16,11 +16,25 @@
             <h5 class="card-title">Дата создания</h5>
             <p class="card-text" th:text="${#temporals.format(task.created, 'dd.MM.yyyy HH:mm')}"></p>
 
+            <!-- НОВОЕ: Приоритет -->
+            <h5 class="card-title">Приоритет</h5>
+            <p class="card-text">
+                <span th:if="${task.priority != null}"
+                      th:text="${task.priority.name}"
+                      th:class="'badge bg-' + (${task.priority.name} == 'urgently' ? 'danger' : 'primary')">
+                </span>
+                <span th:if="${task.priority == null}" class="badge bg-secondary">Не установлен</span>
+            </p>
+
             <h5 class="card-title">Статус</h5>
             <p class="card-text">
                 <span th:if="${task.done}" class="badge bg-success">Выполнено</span>
                 <span th:unless="${task.done}" class="badge bg-warning">Новое</span>
             </p>
+
+            <!-- НОВОЕ: Пользователь -->
+            <h5 class="card-title">Автор</h5>
+            <p class="card-text" th:text="${task.user?.name}"></p>
         </div>
     </div>
 
@@ -35,7 +49,7 @@
             <button type="submit" class="btn btn-danger" onclick="return confirm('Удалить задание?')">Удалить</button>
         </form>
 
-        <a href="/" class="btn btn-secondary">Назад к списку</a>
+        <a th:href="@{/tasks}" class="btn btn-secondary">Назад к списку</a>
     </div>
 </div>
 </body>

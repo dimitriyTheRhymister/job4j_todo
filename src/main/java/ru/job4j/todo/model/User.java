@@ -5,6 +5,7 @@ import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 
 import javax.persistence.*;
+import java.util.Calendar;
 import java.time.LocalDateTime;
 
 @Data
@@ -27,5 +28,6 @@ public class User {
     @Column(nullable = false)
     private String password;
 
+    // Меняем LocalDateTime на Calendar для совместимости с Task
     private LocalDateTime created = LocalDateTime.now();
 }
