@@ -15,49 +15,6 @@ public class TaskRepository {
 
     private final CrudRepository crudRepository;
 
-    public List<Task> findAll() {
-        return crudRepository.query(
-                "SELECT DISTINCT t FROM Task t "
-                        +
-                        "JOIN FETCH t.priority "
-                        +
-                        "JOIN FETCH t.user "
-                        +
-                        "ORDER BY t.created DESC",
-                Task.class
-        );
-    }
-
-    public List<Task> findCompleted() {
-        return crudRepository.query(
-                "SELECT DISTINCT t FROM Task t "
-                        +
-                        "JOIN FETCH t.priority "
-                        +
-                        "JOIN FETCH t.user "
-                        +
-                        "WHERE t.done = true "
-                        +
-                        "ORDER BY t.created DESC",
-                Task.class
-        );
-    }
-
-    public List<Task> findNew() {
-        return crudRepository.query(
-                "SELECT DISTINCT t FROM Task t "
-                        +
-                        "JOIN FETCH t.priority "
-                        +
-                        "JOIN FETCH t.user "
-                        +
-                        "WHERE t.done = false "
-                        +
-                        "ORDER BY t.created DESC",
-                Task.class
-        );
-    }
-
     public Optional<Task> findById(int id) {
         return crudRepository.optional(
                 "SELECT DISTINCT t FROM Task t "

@@ -59,10 +59,6 @@ public class TaskService {
         return priorityRepository.findAll();
     }
 
-    public Optional<Priority> findPriorityById(int id) {
-        return priorityRepository.findById(id);
-    }
-
     // ==== Вспомогательные методы ====
 
     private void validateTask(Task task) {
