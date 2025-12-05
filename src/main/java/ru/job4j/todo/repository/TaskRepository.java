@@ -12,32 +12,61 @@ import java.util.Optional;
 @Repository
 @AllArgsConstructor
 public class TaskRepository {
+
     private final CrudRepository crudRepository;
 
     public List<Task> findAll() {
         return crudRepository.query(
-                "SELECT DISTINCT t FROM Task t JOIN FETCH t.priority JOIN FETCH t.user ORDER BY t.created DESC",
+                "SELECT DISTINCT t FROM Task t "
+                        +
+                        "JOIN FETCH t.priority "
+                        +
+                        "JOIN FETCH t.user "
+                        +
+                        "ORDER BY t.created DESC",
                 Task.class
         );
     }
 
     public List<Task> findCompleted() {
         return crudRepository.query(
-                "SELECT DISTINCT t FROM Task t JOIN FETCH t.priority JOIN FETCH t.user WHERE t.done = true ORDER BY t.created DESC",
+                "SELECT DISTINCT t FROM Task t "
+                        +
+                        "JOIN FETCH t.priority "
+                        +
+                        "JOIN FETCH t.user "
+                        +
+                        "WHERE t.done = true "
+                        +
+                        "ORDER BY t.created DESC",
                 Task.class
         );
     }
 
     public List<Task> findNew() {
         return crudRepository.query(
-                "SELECT DISTINCT t FROM Task t JOIN FETCH t.priority JOIN FETCH t.user WHERE t.done = false ORDER BY t.created DESC",
+                "SELECT DISTINCT t FROM Task t "
+                        +
+                        "JOIN FETCH t.priority "
+                        +
+                        "JOIN FETCH t.user "
+                        +
+                        "WHERE t.done = false "
+                        +
+                        "ORDER BY t.created DESC",
                 Task.class
         );
     }
 
     public Optional<Task> findById(int id) {
         return crudRepository.optional(
-                "SELECT DISTINCT t FROM Task t JOIN FETCH t.priority JOIN FETCH t.user WHERE t.id = :fId",
+                "SELECT DISTINCT t FROM Task t "
+                        +
+                        "JOIN FETCH t.priority "
+                        +
+                        "JOIN FETCH t.user "
+                        +
+                        "WHERE t.id = :fId",
                 Task.class,
                 Map.of("fId", id)
         );
@@ -59,49 +88,29 @@ public class TaskRepository {
         return updatedCount > 0;
     }
 
-    public Task createTask(Task task, User user) {
-        task.setUser(user);
+    public Task createTask(Task task) {
         crudRepository.run(session -> session.save(task));
         return task;
     }
 
     public boolean updateTask(Task task) {
-        // Используем параметризованный запрос для приоритета
-        Map<String, Object> params;
-
-        if (task.getPriority() != null) {
-            params = Map.of(
-                    "description", task.getDescription(),
-                    "done", task.isDone(),
-                    "priority", task.getPriority(),  // передаем объект Priority
-                    "id", task.getId()
-            );
-
-            return crudRepository.executeUpdate(
-                    "UPDATE Task SET description = :description, done = :done, "
-                            +
-                            "priority = :priority WHERE id = :id",
-                    params
-            ) > 0;
-        } else {
-            params = Map.of(
-                    "description", task.getDescription(),
-                    "done", task.isDone(),
-                    "id", task.getId()
-            );
-
-            return crudRepository.executeUpdate(
-                    "UPDATE Task SET description = :description, done = :done "
-                            +
-                            "WHERE id = :id",
-                    params
-            ) > 0;
-        }
+        return crudRepository.tx(session -> {
+            session.merge(task);
+            return true;
+        });
     }
+
+    // ==== Запросы по пользователю ====
 
     public List<Task> findAllByUser(User user) {
         return crudRepository.query(
-                "SELECT DISTINCT t FROM Task t JOIN FETCH t.priority WHERE t.user = :user ORDER BY t.created DESC",
+                "SELECT DISTINCT t FROM Task t "
+                        +
+                        "JOIN FETCH t.priority "
+                        +
+                        "WHERE t.user = :user "
+                        +
+                        "ORDER BY t.created DESC",
                 Task.class,
                 Map.of("user", user)
         );
@@ -109,7 +118,13 @@ public class TaskRepository {
 
     public List<Task> findCompletedByUser(User user) {
         return crudRepository.query(
-                "SELECT DISTINCT t FROM Task t JOIN FETCH t.priority WHERE t.user = :user AND t.done = true ORDER BY t.created DESC",
+                "SELECT DISTINCT t FROM Task t "
+                        +
+                        "JOIN FETCH t.priority "
+                        +
+                        "WHERE t.user = :user AND t.done = true "
+                        +
+                        "ORDER BY t.created DESC",
                 Task.class,
                 Map.of("user", user)
         );
@@ -117,7 +132,13 @@ public class TaskRepository {
 
     public List<Task> findNewByUser(User user) {
         return crudRepository.query(
-                "SELECT DISTINCT t FROM Task t JOIN FETCH t.priority WHERE t.user = :user AND t.done = false ORDER BY t.created DESC",
+                "SELECT DISTINCT t FROM Task t "
+                        +
+                        "JOIN FETCH t.priority "
+                        +
+                        "WHERE t.user = :user AND t.done = false "
+                        +
+                        "ORDER BY t.created DESC",
                 Task.class,
                 Map.of("user", user)
         );

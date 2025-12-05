@@ -14,12 +14,11 @@
             <textarea id="description" th:field="*{description}" class="form-control" rows="4" required></textarea>
         </div>
 
-        <!-- НОВОЕ: Выбор приоритета -->
+        <!-- ИЗМЕНЕНО: name="priority.id" вместо priorityId -->
         <div class="mb-3">
-            <label for="priorityId" class="form-label">Приоритет:</label>
-            <select id="priorityId" name="priorityId" class="form-control">
+            <label for="priority" class="form-label">Приоритет:</label>
+            <select id="priority" name="priority.id" class="form-control">
                 <option value="">-- Выберите приоритет --</option>
-                <!-- Приоритеты должны передаваться в модель через контроллер -->
                 <option th:each="priority : ${priorities}"
                         th:value="${priority.id}"
                         th:text="${priority.name}">

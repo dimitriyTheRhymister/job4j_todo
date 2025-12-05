@@ -16,19 +16,21 @@ import java.io.IOException;
 public class AuthorizationFilter extends HttpFilter {
 
     @Override
-    protected void doFilter(HttpServletRequest request, HttpServletResponse response, FilterChain chain) throws IOException, ServletException {
-        var uri = request.getRequestURI();
+    protected void doFilter(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
+            throws IOException, ServletException {
+        String uri = request.getRequestURI();
 
         if (isAlwaysPermitted(uri)) {
             chain.doFilter(request, response);
             return;
         }
 
+        // Всё остальное требует авторизации
         HttpSession session = request.getSession(false);
-        var userLoggedIn = session != null && session.getAttribute("user") != null;
+        boolean userLoggedIn = session != null && session.getAttribute("user") != null;
 
-        if (isProtectedResource(uri) && !userLoggedIn) {
-            var loginPageUrl = request.getContextPath() + "/users/login";
+        if (!userLoggedIn) {
+            String loginPageUrl = request.getContextPath() + "/users/login";
             response.sendRedirect(loginPageUrl);
             return;
         }
@@ -39,18 +41,11 @@ public class AuthorizationFilter extends HttpFilter {
     private boolean isAlwaysPermitted(String uri) {
         return uri.startsWith("/users/register")
                 || uri.startsWith("/users/login")
-                || uri.startsWith("/css")
-                || uri.startsWith("/js")
-                || uri.startsWith("/images")
+                || uri.startsWith("/css/")
+                || uri.startsWith("/js/")
+                || uri.startsWith("/images/")
                 || uri.equals("/")
-                || uri.equals("/index");
-    }
-
-    private boolean isProtectedResource(String uri) {
-        /* Защищаем только маршруты задач, а регистрацию и логин оставляем открытыми */
-        return uri.startsWith("/tasks")
-                || uri.equals("/all")
-                || uri.equals("/completed")
-                || uri.equals("/new");
+                || uri.equals("/index")
+                || uri.equals("/favicon.ico");
     }
 }

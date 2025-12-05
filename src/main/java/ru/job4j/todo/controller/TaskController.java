@@ -1,6 +1,7 @@
 package ru.job4j.todo.controller;
 
 import lombok.AllArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
@@ -10,38 +11,30 @@ import ru.job4j.todo.model.Task;
 import ru.job4j.todo.model.User;
 import ru.job4j.todo.service.TaskService;
 
-import javax.servlet.http.HttpSession;
 import java.util.List;
 import java.util.Optional;
 
 @Controller
 @AllArgsConstructor
 @RequestMapping("/tasks")
+@Slf4j
 public class TaskController {
+
     private final TaskService taskService;
 
-    // Главная страница со всеми задачами текущего пользователя
     @GetMapping
-    public String getAllTasks(Model model, HttpSession session) {
-        User user = (User) session.getAttribute("user");
-        if (user == null) {
-            return "redirect:/users/login";
-        }
-
+    public String getAllTasks(
+            Model model,
+            @SessionAttribute("user") User user) {
         List<Task> tasks = taskService.findAllByUser(user);
         model.addAttribute("tasks", tasks);
-        return "index"; // Изменил на index (главная страница)
+        return "index";
     }
 
-    // Страница создания задачи
     @GetMapping("/create")
-    public String showCreateForm(Model model, HttpSession session) {
-        User user = (User) session.getAttribute("user");
-        if (user == null) {
-            return "redirect:/users/login";
-        }
-
-        // Получаем список приоритетов для формы
+    public String showCreateForm(
+            Model model,
+            @SessionAttribute("user") User user) {
         List<Priority> priorities = taskService.getAllPriorities();
         model.addAttribute("priorities", priorities);
         model.addAttribute("task", new Task());
@@ -49,79 +42,49 @@ public class TaskController {
     }
 
     @PostMapping("/create")
-    public String createTask(@ModelAttribute Task task,
-                             @RequestParam(value = "priorityId", required = false) Integer priorityId,
-                             HttpSession session,
-                             RedirectAttributes redirectAttributes) {
-        User user = (User) session.getAttribute("user");
-        if (user == null) {
-            redirectAttributes.addFlashAttribute("error", "Пользователь не авторизован");
-            return "redirect:/users/login";
-        }
+    public String createTask(
+            @ModelAttribute Task task,
+            @SessionAttribute("user") User user,
+            RedirectAttributes redirectAttributes) {
 
         task.setUser(user);
 
         try {
-            // Используем метод с приоритетом
-            taskService.createTask(task, user, priorityId);
+            taskService.createTask(task); // ← теперь принимает только task
             redirectAttributes.addFlashAttribute("success", "Задача успешно создана!");
             return "redirect:/tasks";
         } catch (Exception e) {
-            redirectAttributes.addFlashAttribute("error", "Ошибка при создании задачи: " + e.getMessage());
+            log.error("Ошибка при создании задачи", e);
+            redirectAttributes.addFlashAttribute("error", "Не удалось создать задачу");
             return "redirect:/tasks/create";
         }
     }
 
     @GetMapping("/{id}")
-    public String taskDetails(@PathVariable int id,
-                              Model model,
-                              HttpSession session) {
-        User user = (User) session.getAttribute("user");
-        if (user == null) {
-            return "redirect:/users/login";
-        }
+    public String taskDetails(
+            @PathVariable int id,
+            Model model,
+            @SessionAttribute("user") User user) {
 
-        Optional<Task> taskOptional = taskService.findById(id);
-        if (taskOptional.isEmpty()) {
-            model.addAttribute("errorMessage", "Задача с id " + id + " не найдена");
+        Task task = validateTaskOwnership(id, user, model);
+        if (task == null) {
             return "error";
         }
-
-        Task task = taskOptional.get();
-        // Проверяем принадлежность задачи
-        if (task.getUser() == null || !task.getUser().getId().equals(user.getId())) {
-            model.addAttribute("errorMessage", "У вас нет доступа к этой задаче");
-            return "error";
-        }
-
         model.addAttribute("task", task);
         return "details";
     }
 
-    // Страница редактирования задачи
     @GetMapping("/edit/{id}")
-    public String showEditForm(@PathVariable int id,
-                               Model model,
-                               HttpSession session) {
-        User user = (User) session.getAttribute("user");
-        if (user == null) {
-            return "redirect:/users/login";
-        }
+    public String showEditForm(
+            @PathVariable int id,
+            Model model,
+            @SessionAttribute("user") User user) {
 
-        Optional<Task> taskOptional = taskService.findById(id);
-        if (taskOptional.isEmpty()) {
-            model.addAttribute("errorMessage", "Задача с id " + id + " не найдена");
+        Task task = validateTaskOwnership(id, user, model);
+        if (task == null) {
             return "error";
         }
 
-        Task task = taskOptional.get();
-        // Проверяем принадлежность задачи
-        if (task.getUser() == null || !task.getUser().getId().equals(user.getId())) {
-            model.addAttribute("errorMessage", "У вас нет прав для редактирования этой задачи");
-            return "error";
-        }
-
-        // Получаем список приоритетов для формы
         List<Priority> priorities = taskService.getAllPriorities();
         model.addAttribute("priorities", priorities);
         model.addAttribute("task", task);
@@ -129,60 +92,37 @@ public class TaskController {
     }
 
     @PostMapping("/update")
-    public String updateTask(@ModelAttribute Task task,
-                             @RequestParam(value = "priorityId", required = false) Integer priorityId,
-                             @RequestParam(value = "userId") Integer userId, // Добавляем отдельный параметр
-                             HttpSession session,
-                             Model model) {
-        User user = (User) session.getAttribute("user");
-        if (user == null) {
-            return "redirect:/users/login";
-        }
+    public String updateTask(
+            @ModelAttribute Task task,
+            @SessionAttribute("user") User user,
+            Model model) {
 
-        // Проверяем, что редактируемая задача принадлежит текущему пользователю
-        if (!userId.equals(user.getId())) {
-            model.addAttribute("errorMessage", "У вас нет прав для редактирования этой задачи");
+        // Проверка принадлежности (без userId из формы!)
+        Task existing = validateTaskOwnership(task.getId(), user, model);
+        if (existing == null) {
             return "error";
         }
 
-        // Устанавливаем пользователя из сессии (а не из формы)
-        task.setUser(user);
-
-        // Устанавливаем приоритет
-        if (priorityId != null) {
-            Optional<Priority> priority = taskService.findPriorityById(priorityId);
-            priority.ifPresent(task::setPriority);
-        } else {
-            task.setPriority(null);
-        }
+        task.setUser(user); // на всякий случай (хотя Hibernate может и не требовать)
 
         try {
-            boolean updated = taskService.updateTask(task);
-            if (!updated) {
-                model.addAttribute("errorMessage", "Задача не найдена");
-                return "error";
-            }
+            taskService.updateTask(task);
             return "redirect:/tasks/" + task.getId();
-        } catch (RuntimeException e) {
-            model.addAttribute("errorMessage", "Не удалось обновить задачу: " + e.getMessage());
+        } catch (Exception e) {
+            log.error("Ошибка при обновлении задачи", e);
+            model.addAttribute("errorMessage", "Не удалось обновить задачу");
             return "error";
         }
     }
 
-    // Метод для отметки задачи как выполненной
     @PostMapping("/complete/{id}")
-    public String completeTask(@PathVariable int id,
-                               HttpSession session,
-                               Model model) {
-        User user = (User) session.getAttribute("user");
-        if (user == null) {
-            return "redirect:/users/login";
-        }
+    public String completeTask(
+            @PathVariable int id,
+            @SessionAttribute("user") User user,
+            Model model) {
 
-        // Проверяем, принадлежит ли задача пользователю
-        Optional<Task> taskOptional = taskService.findById(id);
-        if (taskOptional.isPresent() && !taskOptional.get().getUser().getId().equals(user.getId())) {
-            model.addAttribute("errorMessage", "У вас нет прав для выполнения этой операции");
+        Task task = validateTaskOwnership(id, user, model);
+        if (task == null) {
             return "error";
         }
 
@@ -194,20 +134,14 @@ public class TaskController {
         return "redirect:/tasks/" + id;
     }
 
-    // Метод для удаления задачи
     @PostMapping("/delete/{id}")
-    public String deleteTask(@PathVariable int id,
-                             HttpSession session,
-                             Model model) {
-        User user = (User) session.getAttribute("user");
-        if (user == null) {
-            return "redirect:/users/login";
-        }
+    public String deleteTask(
+            @PathVariable int id,
+            @SessionAttribute("user") User user,
+            Model model) {
 
-        // Проверяем, принадлежит ли задача пользователю
-        Optional<Task> taskOptional = taskService.findById(id);
-        if (taskOptional.isPresent() && !taskOptional.get().getUser().getId().equals(user.getId())) {
-            model.addAttribute("errorMessage", "У вас нет прав для удаления этой задачи");
+        Task task = validateTaskOwnership(id, user, model);
+        if (task == null) {
             return "error";
         }
 
@@ -217,5 +151,26 @@ public class TaskController {
             return "error";
         }
         return "redirect:/tasks";
+    }
+
+    /**
+     * Проверяет, существует ли задача и принадлежит ли она пользователю.
+     * Если проверка не пройдена — добавляет сообщение об ошибке в модель и возвращает null.
+     * Иначе — возвращает задачу.
+     */
+    private Task validateTaskOwnership(int taskId, User user, Model model) {
+        Optional<Task> taskOpt = taskService.findById(taskId);
+        if (taskOpt.isEmpty()) {
+            model.addAttribute("errorMessage", "Задача с id " + taskId + " не найдена");
+            return null;
+        }
+
+        Task task = taskOpt.get();
+        if (task.getUser() == null || !task.getUser().getId().equals(user.getId())) {
+            model.addAttribute("errorMessage", "У вас нет доступа к этой задаче");
+            return null;
+        }
+
+        return task;
     }
 }

@@ -11,6 +11,7 @@ import java.util.Optional;
 @Repository
 @AllArgsConstructor
 public class PriorityRepository {
+
     private final CrudRepository crudRepository;
 
     /**
@@ -62,5 +63,16 @@ public class PriorityRepository {
                 Map.of("id", id)
         );
         return deletedCount > 0;
+    }
+
+    /**
+     * Проверяет, существует ли приоритет с указанным ID
+     */
+    public boolean existsById(int id) {
+        return crudRepository.optional(
+                "FROM Priority WHERE id = :id",
+                Priority.class,
+                Map.of("id", id)
+        ).isPresent();
     }
 }
