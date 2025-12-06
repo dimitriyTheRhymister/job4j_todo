@@ -8,18 +8,16 @@
 <div class="container mt-4">
     <h1 class="mb-4">Редактировать задание</h1>
 
-    <form th:action="@{/tasks/update}" th:object="${task}" method="post">
+    <form th:action="@{/tasks/update}" method="post">
         <!-- ID задачи (обязательно для обновления) -->
-        <input type="hidden" th:field="*{id}" />
-
-        <!-- ❌ УДАЛЕНО: <input name="userId"> — пользователь берётся из сессии! -->
+        <input type="hidden" name="id" th:value="${task.id}" />
 
         <div class="mb-3">
             <label for="description" class="form-label">Описание:</label>
-            <textarea id="description" th:field="*{description}" class="form-control" rows="4" required></textarea>
+            <textarea id="description" name="description" class="form-control" rows="4" required
+                      th:text="${task.description}"></textarea>
         </div>
 
-        <!-- ИЗМЕНЕНО: name="priority.id" -->
         <div class="mb-3">
             <label for="priority" class="form-label">Приоритет:</label>
             <select id="priority" name="priority.id" class="form-control">
@@ -32,11 +30,74 @@
             </select>
         </div>
 
+        <!-- НОВОЕ: Выбор категорий с предварительным выбором -->
         <div class="mb-3">
-            <button type="submit" class="btn btn-success">Сохранить</button>
+            <label for="categories" class="form-label">Категории:</label>
+            <select id="categories" name="categoryIds" class="form-control" multiple size="5">
+                <option th:each="category : ${categories}"
+                        th:value="${category.id}"
+                        th:text="${category.name}"
+                        th:selected="${selectedCategoryIds != null && selectedCategoryIds.contains(category.id)}">
+                </option>
+            </select>
+            <small class="form-text text-muted">
+                Для выбора нескольких категорий удерживайте клавишу Ctrl (на Windows/Linux) или Cmd (на Mac)
+            </small>
+
+            <!-- Информация о текущих категориях -->
+            <div th:if="${task.categories != null and not #lists.isEmpty(task.categories)}"
+                 class="mt-2 p-2 bg-light rounded">
+                <small class="text-muted">Текущие категории:</small>
+                <div class="d-flex flex-wrap gap-1 mt-1">
+                    <span th:each="category : ${task.categories}"
+                          class="badge bg-info text-dark">
+                        <span th:text="${category.name}"></span>
+                    </span>
+                </div>
+            </div>
+        </div>
+
+        <div class="mb-3">
+            <button type="submit" class="btn btn-primary">Обновить</button>
             <a th:href="@{/tasks/{id}(id=${task.id})}" class="btn btn-secondary">Отмена</a>
         </div>
     </form>
 </div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Опциональный скрипт для улучшения UX
+        const categoriesSelect = document.getElementById('categories');
+        if (categoriesSelect) {
+            // Показываем количество выбранных элементов
+            function updateSelectedCount() {
+                const selectedCount = Array.from(categoriesSelect.selectedOptions).length;
+                const label = categoriesSelect.parentElement.querySelector('.form-label');
+                const baseText = 'Категории:';
+
+                if (selectedCount > 0) {
+                    label.textContent = `${baseText} (выбрано: ${selectedCount})`;
+                    label.style.color = '#0d6efd';
+                } else {
+                    label.textContent = baseText;
+                    label.style.color = '';
+                }
+            }
+
+            // Инициализация при загрузке
+            updateSelectedCount();
+
+            // Обновление при изменении выбора
+            categoriesSelect.addEventListener('change', updateSelectedCount);
+
+            // Подсветка выбранных опций
+            categoriesSelect.addEventListener('focus', function() {
+                Array.from(this.selectedOptions).forEach(opt => {
+                    opt.style.backgroundColor = '#e7f1ff';
+                });
+            });
+        }
+    });
+</script>
 </body>
 </html>

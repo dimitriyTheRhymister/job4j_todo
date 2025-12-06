@@ -18,12 +18,10 @@ public class TaskRepository {
     public Optional<Task> findById(int id) {
         return crudRepository.optional(
                 "SELECT DISTINCT t FROM Task t "
-                        +
-                        "JOIN FETCH t.priority "
-                        +
-                        "JOIN FETCH t.user "
-                        +
-                        "WHERE t.id = :fId",
+                        + "LEFT JOIN FETCH t.categories "
+                        + "JOIN FETCH t.priority "
+                        + "JOIN FETCH t.user "
+                        + "WHERE t.id = :fId",
                 Task.class,
                 Map.of("fId", id)
         );
@@ -57,17 +55,15 @@ public class TaskRepository {
         });
     }
 
-    // ==== Запросы по пользователю ====
+    /* ==== Запросы по пользователю ====  */
 
     public List<Task> findAllByUser(User user) {
         return crudRepository.query(
                 "SELECT DISTINCT t FROM Task t "
-                        +
-                        "JOIN FETCH t.priority "
-                        +
-                        "WHERE t.user = :user "
-                        +
-                        "ORDER BY t.created DESC",
+                        + "LEFT JOIN FETCH t.categories "
+                        + "JOIN FETCH t.priority "
+                        + "WHERE t.user = :user "
+                        + "ORDER BY t.created DESC",
                 Task.class,
                 Map.of("user", user)
         );
@@ -76,12 +72,10 @@ public class TaskRepository {
     public List<Task> findCompletedByUser(User user) {
         return crudRepository.query(
                 "SELECT DISTINCT t FROM Task t "
-                        +
-                        "JOIN FETCH t.priority "
-                        +
-                        "WHERE t.user = :user AND t.done = true "
-                        +
-                        "ORDER BY t.created DESC",
+                        + "LEFT JOIN FETCH t.categories "
+                        + "JOIN FETCH t.priority "
+                        + "WHERE t.user = :user AND t.done = true "
+                        + "ORDER BY t.created DESC",
                 Task.class,
                 Map.of("user", user)
         );
@@ -90,12 +84,10 @@ public class TaskRepository {
     public List<Task> findNewByUser(User user) {
         return crudRepository.query(
                 "SELECT DISTINCT t FROM Task t "
-                        +
-                        "JOIN FETCH t.priority "
-                        +
-                        "WHERE t.user = :user AND t.done = false "
-                        +
-                        "ORDER BY t.created DESC",
+                        + "LEFT JOIN FETCH t.categories "
+                        + "JOIN FETCH t.priority "
+                        + "WHERE t.user = :user AND t.done = false "
+                        + "ORDER BY t.created DESC",
                 Task.class,
                 Map.of("user", user)
         );

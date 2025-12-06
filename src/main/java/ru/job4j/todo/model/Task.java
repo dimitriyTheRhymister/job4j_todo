@@ -4,7 +4,8 @@ import javax.persistence.*;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import java.time.LocalDateTime;
-import java.util.Calendar;
+import java.util.ArrayList;
+import java.util.List;
 
 @Data
 @EqualsAndHashCode(onlyExplicitlyIncluded = true)
@@ -17,10 +18,7 @@ public class Task {
     private Integer id;
 
     private String description;
-
-    // Меняем Calendar на LocalDateTime для совместимости
     private LocalDateTime created = LocalDateTime.now();
-
     private boolean done;
 
     @ManyToOne(fetch = FetchType.LAZY)
@@ -30,4 +28,13 @@ public class Task {
     @ManyToOne
     @JoinColumn(name = "user_id")
     private User user;
+
+    /* Добавляем связь ManyToMany с Category  */
+    @ManyToMany(fetch = FetchType.LAZY)
+    @JoinTable(
+            name = "task_categories",
+            joinColumns = @JoinColumn(name = "task_id"),
+            inverseJoinColumns = @JoinColumn(name = "category_id")
+    )
+    private List<Category> categories = new ArrayList<>();
 }

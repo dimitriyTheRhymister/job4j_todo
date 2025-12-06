@@ -35,13 +35,24 @@
         <a th:href="@{/users/register}">зарегистрироваться</a>.
     </div>
 
+    <!-- Flash сообщения -->
+    <div th:if="${success}" class="alert alert-success alert-dismissible fade show" role="alert">
+        <span th:text="${success}"></span>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+
+    <div th:if="${error}" class="alert alert-danger alert-dismissible fade show" role="alert">
+        <span th:text="${error}"></span>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+
     <!-- Фильтры (только для авторизованных) -->
     <div class="btn-group mb-3" role="group" th:if="${user != null and user.id != null}">
-        <a th:href="@{/all}" class="btn btn-outline-primary"
-           th:classappend="${filter == 'all'} ? 'active'">Все</a>
-        <a th:href="@{/completed}" class="btn btn-outline-success"
+        <a th:href="@{/tasks}" class="btn btn-outline-primary"
+           th:classappend="${filter == null or filter == 'all'} ? 'active'">Все</a>
+        <a th:href="@{/tasks/completed}" class="btn btn-outline-success"
            th:classappend="${filter == 'completed'} ? 'active'">Выполненные</a>
-        <a th:href="@{/new}" class="btn btn-outline-warning"
+        <a th:href="@{/tasks/new}" class="btn btn-outline-warning"
            th:classappend="${filter == 'new'} ? 'active'">Новые</a>
     </div>
 
@@ -52,7 +63,8 @@
             <tr>
                 <th>Описание</th>
                 <th>Дата создания</th>
-                <th>Приоритет</th> <!-- НОВАЯ КОЛОНКА -->
+                <th>Приоритет</th>
+                <th>Категории</th> <!-- НОВАЯ КОЛОНКА -->
                 <th>Статус</th>
                 <th>Пользователь</th>
             </tr>
@@ -67,9 +79,20 @@
                     <!-- Отображаем приоритет с цветом -->
                     <span th:if="${task.priority != null}"
                           th:text="${task.priority.name}"
-                          th:class="'badge bg-' + (${task.priority.name} == 'urgently' ? 'danger' : 'primary')">
+                          th:class="'badge bg-' + (${task.priority.name} == 'urgently' ? 'danger' :
+                                                   (${task.priority.name} == 'normal' ? 'primary' : 'secondary'))">
                     </span>
                     <span th:if="${task.priority == null}" class="badge bg-secondary">Нет</span>
+                </td>
+                <td>
+                    <!-- Отображаем категории -->
+                    <div class="d-flex flex-wrap gap-1">
+                        <span th:each="category : ${task.categories}"
+                              class="badge bg-info text-dark">
+                            <span th:text="${category.name}"></span>
+                        </span>
+                        <span th:if="${#lists.isEmpty(task.categories)}" class="text-muted small">Нет категорий</span>
+                    </div>
                 </td>
                 <td>
                     <span th:if="${task.done}" class="badge bg-success">Выполнено</span>
@@ -78,7 +101,7 @@
                 <td th:text="${task.user?.name}"></td>
             </tr>
             <tr th:if="${tasks.empty}">
-                <td colspan="5" class="text-center">Заданий не найдено</td>
+                <td colspan="6" class="text-center">Заданий не найдено</td>
             </tr>
             </tbody>
         </table>
@@ -89,5 +112,8 @@
         У вас пока нет заданий. <a th:href="@{/tasks/create}">Создайте первое задание</a>.
     </div>
 </div>
+
+<!-- Добавляем Bootstrap JavaScript для работы alert -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
