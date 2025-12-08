@@ -1,6 +1,7 @@
 package ru.job4j.todo.service;
 
 import lombok.AllArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import ru.job4j.todo.model.Category;
 import ru.job4j.todo.model.Priority;
@@ -11,11 +12,14 @@ import ru.job4j.todo.repository.PriorityRepository;
 import ru.job4j.todo.repository.TaskRepository;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 @Service
 @AllArgsConstructor
+@Slf4j
 public class TaskService {
 
     private final TaskRepository taskRepository;
@@ -51,27 +55,25 @@ public class TaskService {
     }
 
     /**
-     * Создать новую задачу с выбранными категориями
+     * Создать новую задачу с выбранными категориями (новая версия с приоритетом)
      */
-    public Task createTask(Task task, List<Integer> categoryIds) {
+    public Task createTask(Task task, int priorityId, List<Integer> categoryIds) {
+        log.debug("Creating task with priorityId={}, categoryIds={}", priorityId, categoryIds);
+
         if (task.getUser() == null) {
-            throw new IllegalArgumentException("Task must be assigned to a user");
+            throw new IllegalArgumentException("Задача должна быть назначена пользователю");
         }
 
-        if (task.getPriority() != null && !priorityRepository.existsById(task.getPriority().getId())) {
-            throw new IllegalArgumentException("Priority with ID " + task.getPriority().getId() + " does not exist");
-        }
+        // Получаем приоритет по ID
+        Priority priority = priorityRepository.findById(priorityId)
+                .orElseThrow(() -> new IllegalArgumentException("Приоритет с ID " + priorityId + " не найден"));
+        task.setPriority(priority);
 
-        if (categoryIds != null) {
-            for (Integer id : categoryIds) {
-                if (id == null || !categoryRepository.existsById(id)) {
-                    throw new IllegalArgumentException("Category with ID " + id + " does not exist");
-                }
-            }
-        }
-
+        // Валидация и установка категорий
         if (categoryIds != null && !categoryIds.isEmpty()) {
-            task.setCategories(categoryRepository.findByIds(categoryIds));
+            validateCategoryIds(categoryIds);
+            List<Category> categories = categoryRepository.findByIds(categoryIds);
+            task.setCategories(categories);
         } else {
             task.setCategories(new ArrayList<>());
         }
@@ -80,31 +82,87 @@ public class TaskService {
     }
 
     /**
-     * Обновить существующую задачу с новыми категориями
+     * Создать новую задачу с выбранными категориями (старая версия для обратной совместимости)
+     */
+    public Task createTask(Task task, List<Integer> categoryIds) {
+        log.warn("Using deprecated createTask method without priorityId. Task priority: {}",
+                task.getPriority() != null ? task.getPriority().getId() : "null");
+
+        // Проверяем, есть ли приоритет в задаче
+        if (task.getPriority() == null || task.getPriority().getId() == null) {
+            throw new IllegalArgumentException("Приоритет не установлен. Используйте метод с priorityId");
+        }
+
+        // Проверяем существование приоритета
+        if (!priorityRepository.existsById(task.getPriority().getId())) {
+            throw new IllegalArgumentException("Приоритет с ID " + task.getPriority().getId() + " не существует");
+        }
+
+        // Валидация и установка категорий
+        if (categoryIds != null && !categoryIds.isEmpty()) {
+            validateCategoryIds(categoryIds);
+            List<Category> categories = categoryRepository.findByIds(categoryIds);
+            task.setCategories(categories);
+        } else {
+            task.setCategories(new ArrayList<>());
+        }
+
+        return taskRepository.createTask(task);
+    }
+
+    /**
+     * Обновить существующую задачу с новыми категориями и приоритетом
+     */
+    public boolean updateTask(Task task, int priorityId, List<Integer> categoryIds) {
+        log.debug("Updating task id={} with priorityId={}, categoryIds={}",
+                task.getId(), priorityId, categoryIds);
+
+        if (task.getId() == null) {
+            throw new IllegalArgumentException("ID задачи не может быть null при обновлении");
+        }
+
+        // Получаем и устанавливаем приоритет
+        Priority priority = priorityRepository.findById(priorityId)
+                .orElseThrow(() -> new IllegalArgumentException("Приоритет с ID " + priorityId + " не найден"));
+        task.setPriority(priority);
+
+        // Валидация и установка категорий
+        if (categoryIds != null && !categoryIds.isEmpty()) {
+            validateCategoryIds(categoryIds);
+            List<Category> categories = categoryRepository.findByIds(categoryIds);
+            task.setCategories(categories);
+        } else {
+            task.setCategories(new ArrayList<>());
+        }
+
+        return taskRepository.updateTask(task);
+    }
+
+    /**
+     * Обновить существующую задачу с новыми категориями (старая версия для обратной совместимости)
      */
     public boolean updateTask(Task task, List<Integer> categoryIds) {
+        log.warn("Using deprecated updateTask method without priorityId");
+
         if (task.getId() == null) {
-            throw new IllegalArgumentException("Task ID must not be null for update");
+            throw new IllegalArgumentException("ID задачи не может быть null при обновлении");
         }
 
-        /* Валидация приоритета (если есть) */
-        if (task.getPriority() != null && !priorityRepository.existsById(task.getPriority().getId())) {
-            throw new IllegalArgumentException("Priority with ID " + task.getPriority().getId() + " does not exist");
-        }
-
-        /* Валидация категорий по ID (новая логика) */
-        if (categoryIds != null && !categoryIds.isEmpty()) {
-            for (Integer catId : categoryIds) {
-                if (catId == null || !categoryRepository.existsById(catId)) {
-                    throw new IllegalArgumentException("Category with ID " + catId + " does not exist");
-                }
+        // Проверяем приоритет
+        if (task.getPriority() != null) {
+            Integer priorityId = task.getPriority().getId();
+            if (priorityId == null || !priorityRepository.existsById(priorityId)) {
+                throw new IllegalArgumentException("Приоритет с ID " + priorityId + " не существует");
             }
+        } else {
+            throw new IllegalArgumentException("Приоритет не установлен. Используйте метод с priorityId");
         }
 
-        /* Теперь безопасно загружать категории */
+        // Валидация и установка категорий
         if (categoryIds != null && !categoryIds.isEmpty()) {
-            List<Category> selectedCategories = categoryRepository.findByIds(categoryIds);
-            task.setCategories(selectedCategories);
+            validateCategoryIds(categoryIds);
+            List<Category> categories = categoryRepository.findByIds(categoryIds);
+            task.setCategories(categories);
         } else {
             task.setCategories(new ArrayList<>());
         }
@@ -161,29 +219,67 @@ public class TaskService {
         return priorityRepository.existsById(id);
     }
 
-    /* ==== Вспомогательные методы ====  */
+    /**
+     * Найти приоритет по ID
+     */
+    public Optional<Priority> findPriorityById(int id) {
+        return priorityRepository.findById(id);
+    }
+
+    /**
+     * Найти категорию по ID
+     */
+    public Optional<Category> findCategoryById(int id) {
+        return categoryRepository.findById(id);
+    }
+
+    /* ==== Вспомогательные методы ==== */
+
+    /**
+     * Валидация ID категорий
+     */
+    private void validateCategoryIds(List<Integer> categoryIds) {
+        if (categoryIds != null) {
+            for (Integer catId : categoryIds) {
+                if (catId == null) {
+                    throw new IllegalArgumentException("ID категории не может быть null");
+                }
+                if (!categoryRepository.existsById(catId)) {
+                    throw new IllegalArgumentException("Категория с ID " + catId + " не существует");
+                }
+            }
+        }
+    }
 
     /**
      * Валидация задачи перед сохранением
      */
     private void validateTask(Task task) {
         if (task.getUser() == null) {
-            throw new IllegalArgumentException("Task must be assigned to a user");
+            throw new IllegalArgumentException("Задача должна быть назначена пользователю");
         }
 
-        /* Валидация приоритета (если установлен)  */
+        // Валидация приоритета
         if (task.getPriority() != null) {
-            int priorityId = task.getPriority().getId();
-            if (!priorityRepository.existsById(priorityId)) {
-                throw new IllegalArgumentException("Priority with ID " + priorityId + " does not exist");
+            Integer priorityId = task.getPriority().getId();
+            if (priorityId == null) {
+                throw new IllegalArgumentException("ID приоритета не может быть null");
             }
+            if (!priorityRepository.existsById(priorityId)) {
+                throw new IllegalArgumentException("Приоритет с ID " + priorityId + " не существует");
+            }
+        } else {
+            throw new IllegalArgumentException("Приоритет не установлен");
         }
 
-        /* Валидация категорий (если установлены)  */
+        // Валидация категорий
         if (task.getCategories() != null && !task.getCategories().isEmpty()) {
             for (Category category : task.getCategories()) {
+                if (category.getId() == null) {
+                    throw new IllegalArgumentException("ID категории не может быть null");
+                }
                 if (!categoryRepository.existsById(category.getId())) {
-                    throw new IllegalArgumentException("Category with ID " + category.getId() + " does not exist");
+                    throw new IllegalArgumentException("Категория с ID " + category.getId() + " не существует");
                 }
             }
         }

@@ -42,6 +42,9 @@ public class UserRepository {
     }
 
     public User createUser(User user) {
+        if (user.getTimezone() == null || user.getTimezone().isEmpty()) {
+            user.setTimezone("Europe/Moscow"); // Устанавливаем часовой пояс по умолчанию
+        }
         crudRepository.run(session -> session.save(user));
         return user;
     }
@@ -56,11 +59,12 @@ public class UserRepository {
 
     public boolean updateUser(User user) {
         crudRepository.run(
-                "UPDATE User SET name = :name, login = :login, password = :password WHERE id = :id",
+                "UPDATE User SET name = :name, login = :login, password = :password, user_zone = :timezone WHERE id = :id",
                 Map.of(
                         "name", user.getName(),
                         "login", user.getLogin(),
                         "password", user.getPassword(),
+                        "timezone", user.getTimezone() != null ? user.getTimezone() : "Europe/Moscow",
                         "id", user.getId()
                 )
         );

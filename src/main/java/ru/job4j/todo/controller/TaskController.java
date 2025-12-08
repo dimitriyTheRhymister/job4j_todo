@@ -11,6 +11,7 @@ import ru.job4j.todo.model.Priority;
 import ru.job4j.todo.model.Task;
 import ru.job4j.todo.model.User;
 import ru.job4j.todo.service.TaskService;
+import ru.job4j.todo.util.TimezoneUtils;
 
 import java.util.List;
 import java.util.Optional;
@@ -43,7 +44,7 @@ public class TaskController {
     public String showCreateForm(
             Model model,
             @SessionAttribute("user") User user) {
-        /* Загружаем все приоритеты и категории для выпадающих списков */
+        // Загружаем все приоритеты и категории для выпадающих списков
         List<Priority> priorities = taskService.getAllPriorities();
         List<Category> categories = taskService.getAllCategories();
 
@@ -59,6 +60,7 @@ public class TaskController {
     @PostMapping("/create")
     public String createTask(
             @ModelAttribute Task task,
+            @RequestParam(value = "priority.id", required = false) String priorityIdStr,
             @RequestParam(value = "categoryIds", required = false) List<Integer> categoryIds,
             @SessionAttribute("user") User user,
             RedirectAttributes redirectAttributes) {
@@ -66,9 +68,23 @@ public class TaskController {
         task.setUser(user);
 
         try {
-            taskService.createTask(task, categoryIds);
+            // Проверяем, что приоритет выбран
+            if (priorityIdStr == null || priorityIdStr.isEmpty()) {
+                redirectAttributes.addFlashAttribute("error", "Не выбран приоритет");
+                return "redirect:/tasks/create";
+            }
+
+            // Конвертируем в int
+            int priorityId = Integer.parseInt(priorityIdStr);
+
+            // Используем TaskService для создания задачи с priorityId
+            taskService.createTask(task, priorityId, categoryIds);
             redirectAttributes.addFlashAttribute("success", "Задача успешно создана!");
             return "redirect:/tasks";
+        } catch (NumberFormatException e) {
+            log.error("Некорректный ID приоритета", e);
+            redirectAttributes.addFlashAttribute("error", "Некорректный приоритет");
+            return "redirect:/tasks/create";
         } catch (IllegalArgumentException e) {
             log.error("Ошибка валидации при создании задачи", e);
             redirectAttributes.addFlashAttribute("error", e.getMessage());
@@ -93,7 +109,15 @@ public class TaskController {
         if (task == null) {
             return "error";
         }
+
+        // Форматируем дату с учетом часового пояса пользователя
+        String formattedDate = TimezoneUtils.formatDateTime(
+                task.getCreated(),
+                user.getTimezone()
+        );
+
         model.addAttribute("task", task);
+        model.addAttribute("formattedDate", formattedDate);
         return "details";
     }
 
@@ -111,11 +135,11 @@ public class TaskController {
             return "error";
         }
 
-        /* Загружаем все приоритеты и категории для выпадающих списков */
+        // Загружаем все приоритеты и категории для выпадающих списков
         List<Priority> priorities = taskService.getAllPriorities();
         List<Category> categories = taskService.getAllCategories();
 
-        /* Получаем ID выбранных категорий для предварительного выбора в форме */
+        // Получаем ID выбранных категорий для предварительного выбора в форме
         List<Integer> selectedCategoryIds = task.getCategories().stream()
                 .map(Category::getId)
                 .collect(Collectors.toList());
@@ -133,22 +157,33 @@ public class TaskController {
     @PostMapping("/update")
     public String updateTask(
             @ModelAttribute Task task,
+            @RequestParam(value = "priority.id", required = false) String priorityIdStr,
             @RequestParam(value = "categoryIds", required = false) List<Integer> categoryIds,
             @SessionAttribute("user") User user,
             Model model,
             RedirectAttributes redirectAttributes) {
 
-        /* Проверка принадлежности задачи пользователю */
+        // Проверка принадлежности задачи пользователю
         Task existing = validateTaskOwnership(task.getId(), user, model);
         if (existing == null) {
             return "error";
         }
 
-        /* Устанавливаем пользователя (Hibernate может потерять связь при merge) */
+        // Устанавливаем пользователя (Hibernate может потерять связь при merge)
         task.setUser(user);
 
         try {
-            boolean updated = taskService.updateTask(task, categoryIds);
+            // Проверяем, что приоритет выбран
+            if (priorityIdStr == null || priorityIdStr.isEmpty()) {
+                model.addAttribute("errorMessage", "Не выбран приоритет");
+                return "error";
+            }
+
+            // Конвертируем в int
+            int priorityId = Integer.parseInt(priorityIdStr);
+
+            // Используем TaskService для обновления задачи с priorityId
+            boolean updated = taskService.updateTask(task, priorityId, categoryIds);
             if (updated) {
                 redirectAttributes.addFlashAttribute("success", "Задача успешно обновлена!");
                 return "redirect:/tasks/" + task.getId();
@@ -156,6 +191,10 @@ public class TaskController {
                 model.addAttribute("errorMessage", "Не удалось обновить задачу");
                 return "error";
             }
+        } catch (NumberFormatException e) {
+            log.error("Некорректный ID приоритета", e);
+            model.addAttribute("errorMessage", "Некорректный приоритет");
+            return "error";
         } catch (IllegalArgumentException e) {
             log.error("Ошибка валидации при обновлении задачи", e);
             model.addAttribute("errorMessage", e.getMessage());

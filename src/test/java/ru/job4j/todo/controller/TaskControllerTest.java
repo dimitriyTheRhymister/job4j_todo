@@ -61,7 +61,6 @@ class TaskControllerTest {
         sampleTask.setCategories(Collections.singletonList(sampleCategory));
     }
 
-    /* === GET /tasks === */
     @Test
     void getAllTasks_shouldReturnIndexWithTasks() throws Exception {
         when(taskService.findAllByUser(eq(testUser))).thenReturn(Collections.singletonList(sampleTask));
@@ -70,18 +69,13 @@ class TaskControllerTest {
                         .sessionAttr("user", testUser))
                 .andExpect(status().isOk())
                 .andExpect(view().name("index"))
-                .andExpect(model().attributeExists("tasks"))
                 .andExpect(model().attribute("tasks", hasSize(1)));
     }
 
-    /* === GET /tasks/create === */
     @Test
     void showCreateForm_shouldReturnCreateViewWithPrioritiesAndCategories() throws Exception {
-        List<Priority> priorities = Collections.singletonList(samplePriority);
-        List<Category> categories = Collections.singletonList(sampleCategory);
-
-        when(taskService.getAllPriorities()).thenReturn(priorities);
-        when(taskService.getAllCategories()).thenReturn(categories);
+        when(taskService.getAllPriorities()).thenReturn(Collections.singletonList(samplePriority));
+        when(taskService.getAllCategories()).thenReturn(Collections.singletonList(sampleCategory));
 
         mockMvc.perform(get("/tasks/create")
                         .sessionAttr("user", testUser))
@@ -90,51 +84,45 @@ class TaskControllerTest {
                 .andExpect(model().attributeExists("priorities", "categories", "task"));
     }
 
-    /* === POST /tasks/create (успех) === */
     @Test
     void createTask_validData_shouldRedirectToTasksWithSuccessFlash() throws Exception {
         Task taskFromForm = new Task();
         taskFromForm.setDescription("New task");
 
-        /* Подготавливаем mock-объект, который вернётся из сервиса */
-        Task savedTask = new Task();
-        savedTask.setId(100);
-        savedTask.setDescription("New task");
-        savedTask.setUser(testUser);
-
         when(taskService.createTask(
                 argThat(t -> "New task".equals(t.getDescription())),
-                anyList()
-        )).thenReturn(savedTask);
+                eq(1),          // priorityId = 1
+                eq(List.of(1))  // categoryIds = [1]
+        )).thenReturn(sampleTask);
 
         mockMvc.perform(post("/tasks/create")
                         .flashAttr("task", taskFromForm)
-                        .param("categoryIds", "1")
+                        .param("priority.id", "1")      // ← ДОБАВЛЕНО
+                        .param("categoryIds", "1")      // ← ДОБАВЛЕНО
                         .sessionAttr("user", testUser))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/tasks"))
-                .andExpect(flash().attributeExists("success"));
+                .andExpect(flash().attribute("success", "Задача успешно создана!"));
     }
 
-    /* === POST /tasks/create (ошибка валидации) === */
     @Test
     void createTask_invalidCategory_shouldRedirectToCreateWithErrorFlash() throws Exception {
         Task taskFromForm = new Task();
         taskFromForm.setDescription("Bad task");
 
-        doThrow(new IllegalArgumentException("Category not found"))
-                .when(taskService).createTask(any(Task.class), anyList());
+        when(taskService.createTask(any(Task.class), eq(1), eq(List.of(999))))
+                .thenThrow(new IllegalArgumentException("Категория с ID 999 не существует"));
 
         mockMvc.perform(post("/tasks/create")
                         .flashAttr("task", taskFromForm)
-                        .param("categoryIds", "999")
+                        .param("priority.id", "1")
+                        .param("categoryIds", "999")    // ← несуществующая категория
                         .sessionAttr("user", testUser))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/tasks/create"))
-                .andExpect(flash().attribute("error", "Category not found"));
+                .andExpect(flash().attribute("error", "Категория с ID 999 не существует"));
     }
 
-    /* === GET /tasks/100 (доступ разрешён) === */
     @Test
     void taskDetails_ownTask_shouldReturnDetailsView() throws Exception {
         when(taskService.findById(100)).thenReturn(java.util.Optional.of(sampleTask));
@@ -146,7 +134,6 @@ class TaskControllerTest {
                 .andExpect(model().attribute("task", sampleTask));
     }
 
-    /* === GET /tasks/999 (задача не найдена) === */
     @Test
     void taskDetails_taskNotFound_shouldReturnErrorView() throws Exception {
         when(taskService.findById(999)).thenReturn(java.util.Optional.empty());
@@ -158,7 +145,6 @@ class TaskControllerTest {
                 .andExpect(model().attribute("errorMessage", "Задача с id 999 не найдена"));
     }
 
-    /* === GET /tasks/100 (чужая задача) === */
     @Test
     void taskDetails_foreignTask_shouldReturnErrorView() throws Exception {
         User otherUser = new User();
@@ -166,6 +152,9 @@ class TaskControllerTest {
         Task foreignTask = new Task();
         foreignTask.setId(100);
         foreignTask.setUser(otherUser);
+        foreignTask.setPriority(samplePriority);
+        foreignTask.setCategories(Collections.emptyList());
+        foreignTask.setCreated(LocalDateTime.now());
 
         when(taskService.findById(100)).thenReturn(java.util.Optional.of(foreignTask));
 
@@ -176,7 +165,6 @@ class TaskControllerTest {
                 .andExpect(model().attribute("errorMessage", "У вас нет доступа к этой задаче"));
     }
 
-    /* === POST /tasks/complete/100 === */
     @Test
     void completeTask_validTask_shouldRedirectWithSuccess() throws Exception {
         when(taskService.findById(100)).thenReturn(java.util.Optional.of(sampleTask));
@@ -189,7 +177,6 @@ class TaskControllerTest {
                 .andExpect(flash().attribute("success", "Задача отмечена как выполненная!"));
     }
 
-    /* === POST /tasks/delete/100 === */
     @Test
     void deleteTask_validTask_shouldRedirectToTasksWithSuccess() throws Exception {
         when(taskService.findById(100)).thenReturn(java.util.Optional.of(sampleTask));
@@ -202,7 +189,6 @@ class TaskControllerTest {
                 .andExpect(flash().attribute("success", "Задача успешно удалена!"));
     }
 
-    /* === GET /tasks/completed === */
     @Test
     void showCompletedTasks_shouldReturnIndexWithFilter() throws Exception {
         when(taskService.findCompletedByUser(testUser)).thenReturn(Collections.emptyList());
@@ -214,7 +200,6 @@ class TaskControllerTest {
                 .andExpect(model().attribute("filter", "completed"));
     }
 
-    /* === GET /tasks/new === */
     @Test
     void showNewTasks_shouldReturnIndexWithFilter() throws Exception {
         when(taskService.findNewByUser(testUser)).thenReturn(Collections.singletonList(sampleTask));

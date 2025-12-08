@@ -12,4 +12,5 @@
     <include file="classpath:db/scripts/005_add_priority_id_to_tasks.sql" relativeToChangelogFile="false"/>
     <include file="classpath:db/scripts/006_ddl_create_categories_table.sql" relativeToChangelogFile="false"/>
     <include file="classpath:db/scripts/007_dml_insert_categories.sql" relativeToChangelogFile="false"/>
+    <include file="classpath:db/scripts/008_ddl_add_timezone_to_user.sql" relativeToChangelogFile="false"/>
 </databaseChangeLog>

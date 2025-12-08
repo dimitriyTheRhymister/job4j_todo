@@ -14,6 +14,7 @@ import ru.job4j.todo.repository.CrudRepository;
 import ru.job4j.todo.repository.PriorityRepository;
 import ru.job4j.todo.repository.TaskRepository;
 import ru.job4j.todo.repository.UserRepository;
+import ru.job4j.todo.util.TimezoneUtils;
 
 import javax.persistence.EntityManager;
 import javax.persistence.PersistenceContext;
@@ -41,7 +42,7 @@ class TaskServiceIntegrationTest {
     private CategoryRepository categoryRepository;
 
     @Autowired
-    private CrudRepository crudRepository; /* ✅ Внедряем CrudRepository напрямую */
+    private CrudRepository crudRepository;
 
     @PersistenceContext
     private EntityManager entityManager;
@@ -52,19 +53,20 @@ class TaskServiceIntegrationTest {
 
     @BeforeEach
     void setUp() {
-        /* Генерируем уникальный login ТОЛЬКО для пользователя */
         String uniqueLogin = "testlogin_" + UUID.randomUUID().toString().substring(0, 8);
 
         testUser = new User();
         testUser.setName("testuser");
-        testUser.setLogin(uniqueLogin); /* ← уникально */
+        testUser.setLogin(uniqueLogin);
         testUser.setPassword("password");
+        testUser.setTimezone("Europe/Moscow");
+        testUser.setCreated(TimezoneUtils.getCurrentDateTimeInTimezone("Europe/Moscow"));
+
         crudRepository.run(session -> {
             session.save(testUser);
             session.flush();
         });
 
-        /* Приоритет и категории — БЕЗ уникальных имён! */
         testPriority = new Priority();
         testPriority.setName("High");
         testPriority.setPosition(1);
@@ -84,7 +86,6 @@ class TaskServiceIntegrationTest {
             session.flush();
         });
 
-        /* Проверка, что ID присвоены и не null */
         assertThat(testUser.getId()).isNotNull();
         assertThat(testPriority.getId()).isNotNull();
         assertThat(catA.getId()).isNotNull();
@@ -94,79 +95,66 @@ class TaskServiceIntegrationTest {
         entityManager.clear();
     }
 
-    /* 1. Создание задачи без категорий */
     @Test
     void whenCreateTaskWithoutCategories_thenTaskSavedWithEmptyCategories() {
         Task task = new Task();
         task.setDescription("Test task no categories");
-        task.setPriority(testPriority);
         task.setUser(testUser);
 
-        Task saved = taskService.createTask(task, null);
+        Task saved = taskService.createTask(task, testPriority.getId(), null);
 
         assertThat(saved.getId()).isNotNull();
         assertThat(saved.getCategories()).isEmpty();
 
-        /* Проверяем в БД напрямую */
         entityManager.clear();
         Optional<Task> fromDb = taskRepository.findById(saved.getId());
         assertThat(fromDb).isPresent();
         assertThat(fromDb.get().getCategories()).isEmpty();
     }
 
-    /* 2. Создание задачи с валидными категориями */
     @Test
     void whenCreateTaskWithValidCategories_thenTaskSavedWithCategories() {
         Task task = new Task();
         task.setDescription("Task with categories");
-        task.setPriority(testPriority);
         task.setUser(testUser);
 
         List<Integer> categoryIds = Arrays.asList(catA.getId(), catB.getId());
-        Task saved = taskService.createTask(task, categoryIds);
+        Task saved = taskService.createTask(task, testPriority.getId(), categoryIds);
 
         assertThat(saved.getCategories()).hasSize(2);
         assertThat(saved.getCategories()).extracting(Category::getName)
                 .containsExactlyInAnyOrder("Work", "Personal");
     }
 
-    /* 3. Создание задачи с несуществующим ID категории */
     @Test
     void whenCreateTaskWithNonExistentCategoryId_thenThrowsIllegalArgumentException() {
         Task task = new Task();
         task.setDescription("Invalid category");
-        task.setPriority(testPriority);
         task.setUser(testUser);
 
-        List<Integer> invalidIds = Arrays.asList(catA.getId(), 99999); /* 99999 не существует */
+        List<Integer> invalidIds = Arrays.asList(catA.getId(), 99999);
 
-        assertThatThrownBy(() -> taskService.createTask(task, invalidIds))
+        assertThatThrownBy(() -> taskService.createTask(task, testPriority.getId(), invalidIds))
                 .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("Category with ID 99999 does not exist");
+                .hasMessageContaining("Категория с ID 99999 не существует");
     }
 
-    /* 4. Обновление задачи: замена категорий */
     @Test
     void whenUpdateTask_thenCategoriesReplacedInDatabase() {
-        /* Создаём задачу с категориями A и B */
         Task task = new Task();
         task.setDescription("Original task");
-        task.setPriority(testPriority);
         task.setUser(testUser);
-        Task saved = taskService.createTask(task, Arrays.asList(catA.getId(), catB.getId()));
+        Task saved = taskService.createTask(task, testPriority.getId(), Arrays.asList(catA.getId(), catB.getId()));
 
-        /* Обновляем: оставляем только C */
         Task updatedTask = new Task();
         updatedTask.setId(saved.getId());
         updatedTask.setDescription("Updated task");
-        updatedTask.setPriority(testPriority);
         updatedTask.setUser(testUser);
 
-        boolean result = taskService.updateTask(updatedTask, Collections.singletonList(catC.getId()));
+        boolean result = taskService.updateTask(updatedTask, testPriority.getId(), Collections.singletonList(catC.getId()));
 
         assertThat(result).isTrue();
 
-        /* Проверяем, что в БД только C */
         entityManager.clear();
         Optional<Task> fromDb = taskRepository.findById(saved.getId());
         assertThat(fromDb).isPresent();
@@ -174,43 +162,36 @@ class TaskServiceIntegrationTest {
         assertThat(fromDb.get().getCategories().get(0).getName()).isEqualTo("Urgent");
     }
 
-    /* 5. Обновление с несуществующей категорией */
     @Test
     void whenUpdateTaskWithNonExistentCategory_thenThrowsIllegalArgumentException() {
         Task task = new Task();
         task.setDescription("ToUpdate");
-        task.setPriority(testPriority);
         task.setUser(testUser);
-        Task saved = taskService.createTask(task, Collections.singletonList(catA.getId()));
+        Task saved = taskService.createTask(task, testPriority.getId(), Collections.singletonList(catA.getId()));
 
         Task update = new Task();
         update.setId(saved.getId());
         update.setDescription("Updated");
-        update.setPriority(testPriority);
         update.setUser(testUser);
 
-        assertThatThrownBy(() -> taskService.updateTask(update, List.of(88888)))
+        assertThatThrownBy(() -> taskService.updateTask(update, testPriority.getId(), List.of(88888)))
                 .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("Category with ID 88888 does not exist");
+                .hasMessageContaining("Категория с ID 88888 не существует");
     }
 
-    /* 6. Обновление задачи без категорий → старые удаляются */
     @Test
     void whenUpdateTaskWithEmptyCategories_thenOldCategoriesRemoved() {
         Task task = new Task();
         task.setDescription("With cats");
-        task.setPriority(testPriority);
         task.setUser(testUser);
-        Task saved = taskService.createTask(task, Arrays.asList(catA.getId(), catB.getId()));
+        Task saved = taskService.createTask(task, testPriority.getId(), Arrays.asList(catA.getId(), catB.getId()));
 
-        /* Обновляем без категорий */
         Task update = new Task();
         update.setId(saved.getId());
         update.setDescription("No cats now");
-        update.setPriority(testPriority);
         update.setUser(testUser);
 
-        boolean result = taskService.updateTask(update, null);
+        boolean result = taskService.updateTask(update, testPriority.getId(), null);
 
         assertThat(result).isTrue();
 

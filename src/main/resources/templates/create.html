@@ -23,7 +23,7 @@
 
         <div class="mb-3">
             <label for="priority" class="form-label">Приоритет:</label>
-            <select id="priority" name="priority.id" class="form-control">
+            <select id="priority" name="priority.id" class="form-control" required>
                 <option value="">-- Выберите приоритет --</option>
                 <option th:each="priority : ${priorities}"
                         th:value="${priority.id}"
@@ -33,7 +33,7 @@
             <small class="form-text text-muted">Выберите приоритет выполнения задачи</small>
         </div>
 
-        <!-- НОВОЕ: Выбор категорий -->
+        <!-- Выбор категорий -->
         <div class="mb-3">
             <label for="categories" class="form-label">Категории:</label>
             <select id="categories" name="categoryIds" class="form-control" multiple size="5">
